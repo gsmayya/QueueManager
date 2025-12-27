@@ -8,8 +8,12 @@ RUN npm ci
 COPY . .
 
 # Frontend base URL used by the browser. For local usage this is typically the host-mapped API port.
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+ARG NEXT_PUBLIC_API_BASE_URL=/api
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+# Used by next.config.ts rewrites to proxy `/api/*` to the backend.
+ARG API_PROXY_TARGET=http://localhost:8080
+ENV API_PROXY_TARGET=$API_PROXY_TARGET
 
 RUN npm run build
 

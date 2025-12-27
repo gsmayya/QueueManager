@@ -73,3 +73,5 @@ out/
 .vercel/
 *.tsbuildinfo
 .eslintcache
+
+.gocache

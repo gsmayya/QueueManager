@@ -14,10 +14,14 @@ services:
       dockerfile: Dockerfile
       args:
         # This must be the browser-reachable API URL.
-        - NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+        - NEXT_PUBLIC_API_BASE_URL=/api
+        # Used at build-time by next.config.ts to proxy `/api/*` to the backend service.
+        - API_PROXY_TARGET=http://api:8080
     environment:
       - PORT=3000
       - HOSTNAME=0.0.0.0
+      # Kept for clarity/override at runtime; build arg above ensures it is available during `next build`.
+      - API_PROXY_TARGET=http://api:8080
     ports:
       - "3000:3000"
     depends_on:
