@@ -1,23 +1,29 @@
-package main
+package tests
 
 import (
 	"testing"
+
+	queueservicepkg "nodequeue-service/queueservice"
+	resourcepkg "nodequeue-service/resource"
 )
 
 func TestNewQueueService(t *testing.T) {
-	qs := NewQueueService()
+	qs := queueservicepkg.NewQueueService()
 
-	if qs.resources == nil {
-		t.Error("Resources map should be initialized")
+	if qs == nil {
+		t.Fatal("QueueService should not be nil")
 	}
-	if qs.nodes == nil {
-		t.Error("Nodes map should be initialized")
+	if qs.ListResources() == nil {
+		t.Error("ListResources should return a non-nil slice")
+	}
+	if qs.ListNodes() == nil {
+		t.Error("ListNodes should return a non-nil slice")
 	}
 }
 
 func TestQueueService_AddResource(t *testing.T) {
-	qs := NewQueueService()
-	resource := NewResource("test-resource", 5)
+	qs := queueservicepkg.NewQueueService()
+	resource := resourcepkg.NewResource("test-resource", 5)
 
 	qs.AddResource(resource)
 
@@ -31,7 +37,7 @@ func TestQueueService_AddResource(t *testing.T) {
 }
 
 func TestQueueService_CreateNode(t *testing.T) {
-	qs := NewQueueService()
+	qs := queueservicepkg.NewQueueService()
 
 	node, err := qs.CreateNode("test-entity")
 	if err != nil {
@@ -72,9 +78,9 @@ func TestQueueService_CreateNode(t *testing.T) {
 }
 
 func TestQueueService_MoveNode(t *testing.T) {
-	qs := NewQueueService()
-	resource1 := NewResource("resource-1", 3)
-	resource2 := NewResource("resource-2", 2)
+	qs := queueservicepkg.NewQueueService()
+	resource1 := resourcepkg.NewResource("resource-1", 3)
+	resource2 := resourcepkg.NewResource("resource-2", 2)
 	qs.AddResource(resource1)
 	qs.AddResource(resource2)
 
@@ -114,8 +120,8 @@ func TestQueueService_MoveNode(t *testing.T) {
 }
 
 func TestQueueService_MoveNode_Errors(t *testing.T) {
-	qs := NewQueueService()
-	resource1 := NewResource("resource-1", 1)
+	qs := queueservicepkg.NewQueueService()
+	resource1 := resourcepkg.NewResource("resource-1", 1)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -134,8 +140,8 @@ func TestQueueService_MoveNode_Errors(t *testing.T) {
 }
 
 func TestQueueService_AllocateNode(t *testing.T) {
-	qs := NewQueueService()
-	resource1 := NewResource("resource-1", 1)
+	qs := queueservicepkg.NewQueueService()
+	resource1 := resourcepkg.NewResource("resource-1", 1)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -165,8 +171,8 @@ func TestQueueService_AllocateNode(t *testing.T) {
 }
 
 func TestQueueService_AllocateNode_Errors(t *testing.T) {
-	qs := NewQueueService()
-	resource1 := NewResource("resource-1", 1)
+	qs := queueservicepkg.NewQueueService()
+	resource1 := resourcepkg.NewResource("resource-1", 1)
 	qs.AddResource(resource1)
 
 	// Not assigned
@@ -190,8 +196,8 @@ func TestQueueService_AllocateNode_Errors(t *testing.T) {
 }
 
 func TestQueueService_CompleteNode(t *testing.T) {
-	qs := NewQueueService()
-	resource1 := NewResource("resource-1", 3)
+	qs := queueservicepkg.NewQueueService()
+	resource1 := resourcepkg.NewResource("resource-1", 3)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -229,7 +235,7 @@ func TestQueueService_CompleteNode(t *testing.T) {
 }
 
 func TestQueueService_CompleteNode_Errors(t *testing.T) {
-	qs := NewQueueService()
+	qs := queueservicepkg.NewQueueService()
 
 	// Try to complete non-existent node
 	err := qs.CompleteNode("non-existent")
@@ -248,8 +254,8 @@ func TestQueueService_CompleteNode_Errors(t *testing.T) {
 }
 
 func TestQueueService_MoveCompletedNode(t *testing.T) {
-	qs := NewQueueService()
-	resource1 := NewResource("resource-1", 3)
+	qs := queueservicepkg.NewQueueService()
+	resource1 := resourcepkg.NewResource("resource-1", 3)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -263,7 +269,7 @@ func TestQueueService_MoveCompletedNode(t *testing.T) {
 }
 
 func TestQueueService_GetNode(t *testing.T) {
-	qs := NewQueueService()
+	qs := queueservicepkg.NewQueueService()
 	node, _ := qs.CreateNode("test-entity")
 
 	retrievedNode, err := qs.GetNode(node.ID)
@@ -282,8 +288,8 @@ func TestQueueService_GetNode(t *testing.T) {
 }
 
 func TestQueueService_GetResource(t *testing.T) {
-	qs := NewQueueService()
-	resource := NewResource("test-resource", 5)
+	qs := queueservicepkg.NewQueueService()
+	resource := resourcepkg.NewResource("test-resource", 5)
 	qs.AddResource(resource)
 
 	retrievedResource, err := qs.GetResource("test-resource")
@@ -302,9 +308,9 @@ func TestQueueService_GetResource(t *testing.T) {
 }
 
 func TestQueueService_ListResources(t *testing.T) {
-	qs := NewQueueService()
-	resource1 := NewResource("resource-1", 5)
-	resource2 := NewResource("resource-2", 3)
+	qs := queueservicepkg.NewQueueService()
+	resource1 := resourcepkg.NewResource("resource-1", 5)
+	resource2 := resourcepkg.NewResource("resource-2", 3)
 	qs.AddResource(resource1)
 	qs.AddResource(resource2)
 
@@ -315,7 +321,7 @@ func TestQueueService_ListResources(t *testing.T) {
 }
 
 func TestQueueService_ListNodes(t *testing.T) {
-	qs := NewQueueService()
+	qs := queueservicepkg.NewQueueService()
 	qs.CreateNode("entity-1")
 	qs.CreateNode("entity-2")
 	qs.CreateNode("entity-3")

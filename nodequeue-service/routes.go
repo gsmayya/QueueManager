@@ -4,12 +4,15 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"nodequeue-service/queueservice"
+	"nodequeue-service/resource"
 )
 
 // setupRoutes registers the HTTP routes for the NodeQueue service.
 //
 // Note: net/http's DefaultServeMux is used for simplicity.
-func setupRoutes(qs *QueueService) {
+func setupRoutes(qs *queueservice.QueueService) {
 	http.HandleFunc("/nodes", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -70,13 +73,29 @@ func setupRoutes(qs *QueueService) {
 	http.HandleFunc("/resources", corsMiddleware(qs.ListResourcesHandler))
 }
 
-func setupResources(fileName string, queueService *QueueService) []resourceConfig {
-	resources := loadResources(fileName)
-	// Add resources to the service
+func setupResources(fileName string, queueService *queueservice.QueueService) []*resource.Resource {
+	resources := resource.LoadResources(fileName)
 	for _, r := range resources {
-		resource := NewResource(r.id, r.capacity)
-		queueService.AddResource(resource)
-		log.Printf("Initialized resource %s with capacity %d", r.id, r.capacity)
+		queueService.AddResource(r)
+		log.Printf("Initialized resource %s with capacity %d", r.ID, r.Capacity)
 	}
 	return resources
+}
+
+// corsMiddleware wraps a handler with permissive CORS headers for browser-based clients.
+//
+// It also short-circuits OPTIONS preflight requests with HTTP 200.
+func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next(w, r)
+	}
 }

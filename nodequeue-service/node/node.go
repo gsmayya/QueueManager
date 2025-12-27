@@ -1,9 +1,15 @@
-package main
+package node
 
 import (
 	"sync"
 	"time"
 )
+
+// Entity is the domain object referenced by a Node.
+// In this service it's intentionally minimal (just a name) and is embedded in API payloads.
+type Entity struct {
+	Name string `json:"name"`
+}
 
 // Node is the unit of work managed by the queue.
 //
@@ -18,25 +24,26 @@ type Node struct {
 	ID     string  `json:"id"`
 	Entity *Entity `json:"entity"`
 	//TODO: Fix this to be current resource
-	ResourceID string    `json:"resource_id,omitempty"`
-	Completed  bool      `json:"completed"`
-	CreatedAt  time.Time `json:"created_at"`
-	resources  []*Resource
-	Log        []NodeLog `json:"log"`
-	mu         sync.RWMutex
+	ResourceID  string    `json:"resource_id,omitempty"`
+	Completed   bool      `json:"completed"`
+	CreatedAt   time.Time `json:"created_at"`
+	resourceIDs []string
+	Log         []NodeLog `json:"log"`
+	mu          sync.RWMutex
 }
 
-func (n *Node) AddResource(resource *Resource) bool {
+// AddResourceID records that this node has been associated with a resource.
+// It intentionally stores only the resource ID to keep the node package independent.
+func (n *Node) AddResourceID(resourceID string) bool {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	// Add list of resources this node has gone through
-	n.resources = append(n.resources, resource)
+	n.resourceIDs = append(n.resourceIDs, resourceID)
 	return true
 }
 
 // addLog appends a lifecycle event to the node log.
 // It is not concurrency-safe on its own; callers should ensure appropriate external locking.
-func (n *Node) addLog(action, resourceID string) {
+func (n *Node) AddLog(action, resourceID string) {
 	n.Log = append(n.Log, NodeLog{
 		Action:     action,
 		ResourceID: resourceID,
@@ -56,11 +63,6 @@ type CreateNodeRequest struct {
 // MoveNodeRequest is the request payload for POST /nodes/{id}/move.
 type MoveNodeRequest struct {
 	TargetResourceID string `json:"target_resource_id"`
-}
-
-// ErrorResponse is a consistent JSON error envelope returned by handlers in this service.
-type ErrorResponse struct {
-	Error string `json:"error"`
 }
 
 // NodeLog records an action taken on a node (with optional Resource context) and when it occurred.

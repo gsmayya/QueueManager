@@ -1,4 +1,4 @@
-package main
+package queueservice
 
 import (
 	"encoding/json"
@@ -8,6 +8,10 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"nodequeue-service/node"
+	"nodequeue-service/resource"
+	"nodequeue-service/utils"
 
 	"github.com/google/uuid"
 )
@@ -22,39 +26,39 @@ import (
 // - Moving/assigning a node to a resource places it into that resource's waiting queue.
 // - Allocation (waiting -> service) is where capacity is enforced.
 type QueueService struct {
-	resources map[string]*Resource
-	nodes     map[string]*Node
+	resources map[string]*resource.Resource
+	nodes     map[string]*node.Node
 	mu        sync.RWMutex
 }
 
 // NewQueueService constructs a QueueService with initialized maps.
 func NewQueueService() *QueueService {
 	return &QueueService{
-		resources: make(map[string]*Resource),
-		nodes:     make(map[string]*Node),
+		resources: make(map[string]*resource.Resource),
+		nodes:     make(map[string]*node.Node),
 	}
 }
 
 // AddResource registers a Resource by ID, replacing any existing entry with the same ID.
-func (qs *QueueService) AddResource(resource *Resource) {
+func (qs *QueueService) AddResource(r *resource.Resource) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
-	qs.resources[resource.ID] = resource
+	qs.resources[r.ID] = r
 }
 
 // CreateNode creates and stores a new node for the provided entity name.
 // The node is created unassigned (ResourceID empty) and includes an initial "created" log entry.
-func (qs *QueueService) CreateNode(entityName string) (*Node, error) {
+func (qs *QueueService) CreateNode(entityName string) (*node.Node, error) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 
-	node := &Node{
+	node := &node.Node{
 		ID:        uuid.New().String(),
-		Entity:    &Entity{Name: entityName},
+		Entity:    &node.Entity{Name: entityName},
 		Completed: false,
 		CreatedAt: time.Now(),
 	}
-	node.addLog("created", "")
+	node.AddLog("created", "")
 
 	qs.nodes[node.ID] = node
 	return node, nil
@@ -93,7 +97,7 @@ func (qs *QueueService) MoveNode(nodeID, targetResourceID string) error {
 
 	// Assign to target resource (always goes to waiting queue)
 	targetResource.AddNode(node)
-	node.addLog("moved_to_waiting_queue", targetResourceID)
+	node.AddLog("moved_to_waiting_queue", targetResourceID)
 
 	return nil
 }
@@ -129,16 +133,7 @@ func (qs *QueueService) AllocateNode(nodeID string) error {
 	}
 
 	// Ensure node is currently in the waiting queue, and enforce capacity on promotion to service
-	resource.mu.RLock()
-	inService := false
-	for _, n := range resource.Nodes {
-		if n.ID == nodeID {
-			inService = true
-			break
-		}
-	}
-	resource.mu.RUnlock()
-	if inService {
+	if resource.IsInService(nodeID) {
 		return errors.New("node is already in service queue")
 	}
 
@@ -150,7 +145,7 @@ func (qs *QueueService) AllocateNode(nodeID string) error {
 		return errors.New("node is not in waiting queue")
 	}
 
-	node.addLog("moved_to_service_queue", node.ResourceID)
+	node.AddLog("moved_to_service_queue", node.ResourceID)
 	return nil
 }
 
@@ -170,7 +165,7 @@ func (qs *QueueService) CompleteNode(nodeID string) error {
 	}
 
 	node.Completed = true
-	node.addLog("completed", node.ResourceID)
+	node.AddLog("completed", node.ResourceID)
 
 	// Remove from current resource
 	if node.ResourceID != "" {
@@ -184,7 +179,7 @@ func (qs *QueueService) CompleteNode(nodeID string) error {
 }
 
 // GetNode returns a node by ID.
-func (qs *QueueService) GetNode(nodeID string) (*Node, error) {
+func (qs *QueueService) GetNode(nodeID string) (*node.Node, error) {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
@@ -197,7 +192,7 @@ func (qs *QueueService) GetNode(nodeID string) (*Node, error) {
 }
 
 // GetResource returns a resource by ID.
-func (qs *QueueService) GetResource(resourceID string) (*Resource, error) {
+func (qs *QueueService) GetResource(resourceID string) (*resource.Resource, error) {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
@@ -210,11 +205,11 @@ func (qs *QueueService) GetResource(resourceID string) (*Resource, error) {
 }
 
 // ListResources returns a snapshot slice of all resources currently registered.
-func (qs *QueueService) ListResources() []*Resource {
+func (qs *QueueService) ListResources() []*resource.Resource {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
-	resources := make([]*Resource, 0, len(qs.resources))
+	resources := make([]*resource.Resource, 0, len(qs.resources))
 	for _, resource := range qs.resources {
 		resources = append(resources, resource)
 	}
@@ -225,11 +220,11 @@ func (qs *QueueService) ListResources() []*Resource {
 }
 
 // ListNodes returns a snapshot slice of all nodes currently stored.
-func (qs *QueueService) ListNodes() []*Node {
+func (qs *QueueService) ListNodes() []*node.Node {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
-	nodes := make([]*Node, 0, len(qs.nodes))
+	nodes := make([]*node.Node, 0, len(qs.nodes))
 	for _, node := range qs.nodes {
 		nodes = append(nodes, node)
 	}
@@ -252,16 +247,16 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var req CreateNodeRequest
+	var req node.CreateNodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[API] POST /nodes - ERROR: Invalid request body - %v", err)
-		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.EntityName == "" {
 		log.Printf("[API] POST /nodes - ERROR: entity_name is required")
-		respondWithError(w, http.StatusBadRequest, "entity_name is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "entity_name is required")
 		return
 	}
 
@@ -270,7 +265,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 	node, err := qs.CreateNode(req.EntityName)
 	if err != nil {
 		log.Printf("[API] POST /nodes - ERROR: %v", err)
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -280,7 +275,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 		if err := qs.MoveNode(node.ID, req.ResourceID); err != nil {
 			log.Printf("[API] POST /nodes - ERROR moving node: %v", err)
 			// If move fails, still return the created node
-			respondWithJSON(w, http.StatusCreated, node)
+			utils.RespondWithJSON(w, http.StatusCreated, node)
 			return
 		}
 		// Refresh node to get updated state
@@ -289,7 +284,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 
 	duration := time.Since(startTime)
 	log.Printf("[API] POST /nodes - SUCCESS: Created node %s (took %v)", node.ID, duration)
-	respondWithJSON(w, http.StatusCreated, node)
+	utils.RespondWithJSON(w, http.StatusCreated, node)
 }
 
 // MoveNodeHandler handles POST /nodes/{id}/move.
@@ -300,16 +295,16 @@ func (qs *QueueService) MoveNodeHandler(w http.ResponseWriter, r *http.Request, 
 	startTime := time.Now()
 	log.Printf("[API] POST /nodes/%s/move - Request", nodeID)
 
-	var req MoveNodeRequest
+	var req node.MoveNodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[API] POST /nodes/%s/move - ERROR: Invalid request body - %v", nodeID, err)
-		respondWithError(w, http.StatusBadRequest, "Invalid request body")
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.TargetResourceID == "" {
 		log.Printf("[API] POST /nodes/%s/move - ERROR: target_resource_id is required", nodeID)
-		respondWithError(w, http.StatusBadRequest, "target_resource_id is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "target_resource_id is required")
 		return
 	}
 
@@ -320,14 +315,14 @@ func (qs *QueueService) MoveNodeHandler(w http.ResponseWriter, r *http.Request, 
 			statusCode = http.StatusNotFound
 		}
 		log.Printf("[API] POST /nodes/%s/move - ERROR: %v", nodeID, err)
-		respondWithError(w, statusCode, err.Error())
+		utils.RespondWithError(w, statusCode, err.Error())
 		return
 	}
 
 	duration := time.Since(startTime)
 	log.Printf("[API] POST /nodes/%s/move - SUCCESS: Moved to resource %s (took %v)", nodeID, req.TargetResourceID, duration)
 	node, _ := qs.GetNode(nodeID)
-	respondWithJSON(w, http.StatusOK, node)
+	utils.RespondWithJSON(w, http.StatusOK, node)
 }
 
 // CompleteNodeHandler handles POST /nodes/{id}/complete.
@@ -343,14 +338,14 @@ func (qs *QueueService) CompleteNodeHandler(w http.ResponseWriter, r *http.Reque
 			statusCode = http.StatusNotFound
 		}
 		log.Printf("[API] POST /nodes/%s/complete - ERROR: %v", nodeID, err)
-		respondWithError(w, statusCode, err.Error())
+		utils.RespondWithError(w, statusCode, err.Error())
 		return
 	}
 
 	duration := time.Since(startTime)
 	log.Printf("[API] POST /nodes/%s/complete - SUCCESS: Node completed (took %v)", nodeID, duration)
 	node, _ := qs.GetNode(nodeID)
-	respondWithJSON(w, http.StatusOK, node)
+	utils.RespondWithJSON(w, http.StatusOK, node)
 }
 
 // AllocateNodeHandler handles POST /nodes/{id}/allocate.
@@ -367,14 +362,14 @@ func (qs *QueueService) AllocateNodeHandler(w http.ResponseWriter, r *http.Reque
 			statusCode = http.StatusNotFound
 		}
 		log.Printf("[API] POST /nodes/%s/allocate - ERROR: %v", nodeID, err)
-		respondWithError(w, statusCode, err.Error())
+		utils.RespondWithError(w, statusCode, err.Error())
 		return
 	}
 
 	duration := time.Since(startTime)
 	log.Printf("[API] POST /nodes/%s/allocate - SUCCESS: Node allocated (took %v)", nodeID, duration)
 	node, _ := qs.GetNode(nodeID)
-	respondWithJSON(w, http.StatusOK, node)
+	utils.RespondWithJSON(w, http.StatusOK, node)
 }
 
 // GetNodeHandler handles GET /nodes/{id}.
@@ -384,11 +379,11 @@ func (qs *QueueService) GetNodeHandler(w http.ResponseWriter, r *http.Request, n
 	node, err := qs.GetNode(nodeID)
 	if err != nil {
 		log.Printf("[API] GET /nodes/%s - ERROR: %v", nodeID, err)
-		respondWithError(w, http.StatusNotFound, err.Error())
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
 	log.Printf("[API] GET /nodes/%s - SUCCESS", nodeID)
-	respondWithJSON(w, http.StatusOK, node)
+	utils.RespondWithJSON(w, http.StatusOK, node)
 }
 
 // ListNodesHandler handles GET /nodes.
@@ -401,7 +396,7 @@ func (qs *QueueService) ListNodesHandler(w http.ResponseWriter, r *http.Request)
 	log.Printf("[API] GET /nodes - Request")
 	nodes := qs.ListNodes()
 	log.Printf("[API] GET /nodes - SUCCESS: Returning %d nodes", len(nodes))
-	respondWithJSON(w, http.StatusOK, nodes)
+	utils.RespondWithJSON(w, http.StatusOK, nodes)
 }
 
 // ListResourcesHandler handles GET /resources.
@@ -414,5 +409,5 @@ func (qs *QueueService) ListResourcesHandler(w http.ResponseWriter, r *http.Requ
 	log.Printf("[API] GET /resources - Request")
 	resources := qs.ListResources()
 	log.Printf("[API] GET /resources - SUCCESS: Returning %d resources", len(resources))
-	respondWithJSON(w, http.StatusOK, resources)
+	utils.RespondWithJSON(w, http.StatusOK, resources)
 }

@@ -5,13 +5,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"nodequeue-service/queueservice"
 )
 
 // main is the program entry point. It initializes resources, registers routes,
 // and starts the HTTP server.
 func main() {
 	// Initialize queue service
-	queueService := NewQueueService()
+	queueService := queueservice.NewQueueService()
 
 	// Load resources from config (or fall back to defaults).
 	resources := setupResources("config.txt", queueService)
