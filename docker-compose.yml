@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: ./nodequeue-service
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8080
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: ./nodequeue-frontend
+      dockerfile: Dockerfile
+      args:
+        # This must be the browser-reachable API URL.
+        - NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
