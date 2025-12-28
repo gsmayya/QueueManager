@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strings"
 
+	"nodequeue-service/db"
 	"nodequeue-service/queueservice"
 	"nodequeue-service/resource"
 )
@@ -73,7 +75,20 @@ func setupRoutes(qs *queueservice.QueueService) {
 	http.HandleFunc("/resources", corsMiddleware(qs.ListResourcesHandler))
 }
 
-func setupResources(fileName string, queueService *queueservice.QueueService) []*resource.Resource {
+func setupResources(fileName string, queueService *queueservice.QueueService, store db.Store) []*resource.Resource {
+	// Prefer DB resources when available, but fall back to local defaults if DB isn't configured/reachable.
+	if store != nil {
+		if dbResources, err := store.ListResources(context.Background()); err == nil && len(dbResources) > 0 {
+			for _, r := range dbResources {
+				queueService.AddResource(r)
+				log.Printf("Initialized resource %s with capacity %d (from DB)", r.ID, r.Capacity)
+			}
+			return dbResources
+		} else if err != nil {
+			log.Printf("[DB] load resources failed, falling back to defaults: %v", err)
+		}
+	}
+
 	resources := resource.LoadResources(fileName)
 	for _, r := range resources {
 		queueService.AddResource(r)

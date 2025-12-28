@@ -1,22 +1,42 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=nodequeue
+      - POSTGRES_USER=nodequeue
+      - POSTGRES_PASSWORD=nodequeue
+    ports:
+      - "5432:5432"
+    volumes:
+      - nodequeue_db_data:/var/lib/postgresql/data
+      - ./nodequeue-service/db/init:/docker-entrypoint-initdb.d:ro
+
   api:
     image: golang:1.21-alpine
     working_dir: /app
     environment:
       - PORT=8080
       - CGO_ENABLED=0
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=nodequeue
+      - DB_USER=nodequeue
+      - DB_PASSWORD=nodequeue
     volumes:
       - ./nodequeue-service:/app
       - go_mod_cache:/go/pkg/mod
     ports:
       - "8080:8080"
+    depends_on:
+      - db
     command: sh -c "go mod download && go run ."
 
   web:
     image: node:20-alpine
     working_dir: /app
     environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_BASE_URL=/api
+      - API_PROXY_TARGET=http://api:8080
       - HOSTNAME=0.0.0.0
       - PORT=3000
     volumes:
@@ -31,4 +51,5 @@ services:
 volumes:
   go_mod_cache:
   web_node_modules:
+  nodequeue_db_data:
 

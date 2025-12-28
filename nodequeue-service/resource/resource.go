@@ -183,9 +183,9 @@ func loadResources(fileName string) []resourceConfig {
 	// If file is missing OR produced no valid resources, use defaults.
 	if len(resources) == 0 {
 		resources = []resourceConfig{
-			{id: "resource-1", capacity: 5},
-			{id: "resource-2", capacity: 3},
-			{id: "resource-3", capacity: 4},
+			{id: "Room 1", capacity: 5},
+			{id: "Room 2", capacity: 3},
+			{id: "Room 3", capacity: 4},
 		}
 	}
 	return resources

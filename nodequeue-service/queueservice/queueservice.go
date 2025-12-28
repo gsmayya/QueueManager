@@ -1,6 +1,7 @@
 package queueservice
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"nodequeue-service/db"
 	"nodequeue-service/node"
 	"nodequeue-service/resource"
 	"nodequeue-service/utils"
@@ -28,14 +30,31 @@ import (
 type QueueService struct {
 	resources map[string]*resource.Resource
 	nodes     map[string]*node.Node
+	store     db.Store
 	mu        sync.RWMutex
 }
 
 // NewQueueService constructs a QueueService with initialized maps.
 func NewQueueService() *QueueService {
+	return NewQueueServiceWithStore(nil)
+}
+
+// NewQueueServiceWithStore constructs a QueueService with an optional persistence store.
+// The store is used on a best-effort basis to avoid changing API behavior if the DB is down.
+func NewQueueServiceWithStore(store db.Store) *QueueService {
 	return &QueueService{
 		resources: make(map[string]*resource.Resource),
 		nodes:     make(map[string]*node.Node),
+		store:     store,
+	}
+}
+
+func (qs *QueueService) bestEffortPersist(ctx context.Context, op string, fn func(ctx context.Context) error) {
+	if qs.store == nil {
+		return
+	}
+	if err := fn(ctx); err != nil {
+		log.Printf("[DB] %s failed: %v", op, err)
 	}
 }
 
@@ -61,6 +80,18 @@ func (qs *QueueService) CreateNode(entityName string) (*node.Node, error) {
 	node.AddLog("created", "")
 
 	qs.nodes[node.ID] = node
+
+	// Persist audit trail (best-effort).
+	ctx := context.Background()
+	entityID := uuid.New().String()
+	createdAt := node.CreatedAt
+	qs.bestEffortPersist(ctx, "PersistNodeCreated", func(ctx context.Context) error {
+		return qs.store.PersistNodeCreated(ctx, node.ID, entityID, entityName, createdAt)
+	})
+	qs.bestEffortPersist(ctx, "InsertNodeLog(created)", func(ctx context.Context) error {
+		return qs.store.InsertNodeLog(ctx, node.ID, "created", nil, createdAt)
+	})
+
 	return node, nil
 }
 
@@ -98,6 +129,16 @@ func (qs *QueueService) MoveNode(nodeID, targetResourceID string) error {
 	// Assign to target resource (always goes to waiting queue)
 	targetResource.AddNode(node)
 	node.AddLog("moved_to_waiting_queue", targetResourceID)
+
+	// Persist audit trail (best-effort).
+	ctx := context.Background()
+	rid := targetResourceID
+	qs.bestEffortPersist(ctx, "UpdateNodeResource(move)", func(ctx context.Context) error {
+		return qs.store.UpdateNodeResource(ctx, node.ID, &rid)
+	})
+	qs.bestEffortPersist(ctx, "InsertNodeLog(moved_to_waiting_queue)", func(ctx context.Context) error {
+		return qs.store.InsertNodeLog(ctx, node.ID, "moved_to_waiting_queue", &rid, time.Now())
+	})
 
 	return nil
 }
@@ -146,6 +187,13 @@ func (qs *QueueService) AllocateNode(nodeID string) error {
 	}
 
 	node.AddLog("moved_to_service_queue", node.ResourceID)
+
+	// Persist audit trail (best-effort).
+	ctx := context.Background()
+	rid := node.ResourceID
+	qs.bestEffortPersist(ctx, "InsertNodeLog(moved_to_service_queue)", func(ctx context.Context) error {
+		return qs.store.InsertNodeLog(ctx, node.ID, "moved_to_service_queue", &rid, time.Now())
+	})
 	return nil
 }
 
@@ -172,6 +220,15 @@ func (qs *QueueService) CompleteNode(nodeID string) error {
 		if resource, exists := qs.resources[node.ResourceID]; exists {
 			resource.RemoveNode(nodeID)
 		}
+		// Persist node completion + clear resource (best-effort).
+		ctx := context.Background()
+		rid := node.ResourceID
+		qs.bestEffortPersist(ctx, "MarkNodeCompleted(true)", func(ctx context.Context) error {
+			return qs.store.MarkNodeCompleted(ctx, node.ID, true)
+		})
+		qs.bestEffortPersist(ctx, "InsertNodeLog(completed)", func(ctx context.Context) error {
+			return qs.store.InsertNodeLog(ctx, node.ID, "completed", &rid, time.Now())
+		})
 		node.ResourceID = ""
 	}
 

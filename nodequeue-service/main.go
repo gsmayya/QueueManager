@@ -6,17 +6,32 @@ import (
 	"net/http"
 	"os"
 
+	"nodequeue-service/db"
 	"nodequeue-service/queueservice"
 )
 
 // main is the program entry point. It initializes resources, registers routes,
 // and starts the HTTP server.
 func main() {
+	// Optional DB connection (best-effort). If env vars are not set or DB is down, we run in-memory.
+	dbConn, err := db.OpenFromEnv()
+	if err != nil {
+		log.Printf("[DB] disabled (failed to connect): %v", err)
+	}
+	if dbConn != nil {
+		defer dbConn.Close()
+	}
+
+	var store db.Store
+	if dbConn != nil {
+		store = db.NewPostgresStore(dbConn)
+	}
+
 	// Initialize queue service
-	queueService := queueservice.NewQueueService()
+	queueService := queueservice.NewQueueServiceWithStore(store)
 
 	// Load resources from config (or fall back to defaults).
-	resources := setupResources("config.txt", queueService)
+	resources := setupResources("config.txt", queueService, store)
 	log.Printf("Initialized %d resources", len(resources))
 
 	// Setup HTTP routes
