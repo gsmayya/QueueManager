@@ -53,4 +53,5 @@ services:
 
 volumes:
   nodequeue_db_data:
+    name: nodequeue_db_data
 

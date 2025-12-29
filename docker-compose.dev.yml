@@ -52,4 +52,5 @@ volumes:
   go_mod_cache:
   web_node_modules:
   nodequeue_db_data:
+    name: nodequeue_db_data_dev
 

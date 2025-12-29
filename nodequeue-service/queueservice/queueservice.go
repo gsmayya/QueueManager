@@ -288,6 +288,101 @@ func (qs *QueueService) ListNodes() []*node.Node {
 	return nodes
 }
 
+// RestoreFromStore rebuilds the in-memory node state from the configured Store.
+// It is intended to be called on startup after resources have been loaded into qs.
+//
+// Placement rules:
+//   - nodes with resource_id get placed into waiting or service queue based on latest node_log action
+//     (moved_to_waiting_queue vs moved_to_service_queue)
+//   - ordering within each queue is by that latest relevant log timestamp ascending.
+func (qs *QueueService) RestoreFromStore(ctx context.Context) error {
+	if qs.store == nil {
+		return nil
+	}
+
+	persisted, err := qs.store.ListNodes(ctx)
+	if err != nil {
+		return err
+	}
+	states, err := qs.store.ListLatestNodeStates(ctx)
+	if err != nil {
+		return err
+	}
+
+	qs.mu.Lock()
+	defer qs.mu.Unlock()
+
+	// Clear existing in-memory nodes and resource queues to avoid duplicates.
+	qs.nodes = make(map[string]*node.Node, len(persisted))
+	for _, r := range qs.resources {
+		r.Nodes = nil
+		r.WaitingQueue = nil
+	}
+
+	type queued struct {
+		n  *node.Node
+		ts time.Time
+	}
+	waitingByRes := make(map[string][]queued)
+	serviceByRes := make(map[string][]queued)
+
+	for _, pn := range persisted {
+		n := &node.Node{
+			ID:        pn.NodeID,
+			Entity:    &node.Entity{Name: pn.EntityName},
+			Completed: pn.Completed,
+			CreatedAt: pn.CreatedAt,
+		}
+		if pn.ResourceID != nil {
+			n.ResourceID = *pn.ResourceID
+		}
+		qs.nodes[n.ID] = n
+
+		// Only enqueue nodes assigned to a known resource.
+		if n.ResourceID == "" {
+			continue
+		}
+		if _, ok := qs.resources[n.ResourceID]; !ok {
+			continue
+		}
+
+		st, ok := states[n.ID]
+		queueTS := pn.CreatedAt
+		queueKind := db.QueueKindWaiting
+		if ok {
+			queueTS = st.TS
+			queueKind = st.Queue
+		}
+
+		switch queueKind {
+		case db.QueueKindService:
+			serviceByRes[n.ResourceID] = append(serviceByRes[n.ResourceID], queued{n: n, ts: queueTS})
+		default:
+			waitingByRes[n.ResourceID] = append(waitingByRes[n.ResourceID], queued{n: n, ts: queueTS})
+		}
+	}
+
+	// Apply sorted queues to resources.
+	for rid, items := range waitingByRes {
+		sort.Slice(items, func(i, j int) bool { return items[i].ts.Before(items[j].ts) })
+		r := qs.resources[rid]
+		r.WaitingQueue = make([]*node.Node, 0, len(items))
+		for _, it := range items {
+			r.WaitingQueue = append(r.WaitingQueue, it.n)
+		}
+	}
+	for rid, items := range serviceByRes {
+		sort.Slice(items, func(i, j int) bool { return items[i].ts.Before(items[j].ts) })
+		r := qs.resources[rid]
+		r.Nodes = make([]*node.Node, 0, len(items))
+		for _, it := range items {
+			r.Nodes = append(r.Nodes, it.n)
+		}
+	}
+
+	return nil
+}
+
 // Handlers being called from API end point
 
 // CreateNodeHandler handles POST /nodes.

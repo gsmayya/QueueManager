@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -33,6 +34,13 @@ func main() {
 	// Load resources from config (or fall back to defaults).
 	resources := setupResources("config.txt", queueService, store)
 	log.Printf("Initialized %d resources", len(resources))
+
+	// Restore nodes + queue membership from DB (best-effort).
+	if store != nil {
+		if err := queueService.RestoreFromStore(context.Background()); err != nil {
+			log.Printf("[DB] restore state failed (continuing with empty node state): %v", err)
+		}
+	}
 
 	// Setup HTTP routes
 	setupRoutes(queueService)
