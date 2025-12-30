@@ -4,16 +4,24 @@ import React from "react";
 import type { Node, Resource } from "../lib/types";
 import { NodeCard } from "./NodeCard";
 
+type DropKind = "waiting" | "service";
+
+function getDraggedNodeId(e: React.DragEvent): string | null {
+  const id =
+    e.dataTransfer.getData("application/x-node-id") ||
+    e.dataTransfer.getData("text/plain") ||
+    "";
+  return id.trim() ? id.trim() : null;
+}
+
 export function ResourceCard({
   resource,
-  onAllocate,
-  onMove,
   onComplete,
+  onDropNode,
 }: {
   resource: Resource;
-  onAllocate: (nodeId: string) => void;
-  onMove: (nodeId: string) => void;
   onComplete: (nodeId: string) => void;
+  onDropNode: (args: { nodeId: string; resourceId: string; kind: DropKind }) => void;
 }) {
   const serviceNodes: Node[] = resource.nodes ?? [];
   const waitingNodes: Node[] = resource.waiting_queue ?? [];
@@ -31,10 +39,22 @@ export function ResourceCard({
         <div className="mb-2 text-xs font-semibold tracking-widest text-zinc-500">
           SERVICE QUEUE ({serviceNodes.length})
         </div>
-        <div className="min-h-[80px] rounded-lg border-2 border-dashed border-emerald-500 bg-emerald-50 p-3">
+        <div
+          className="min-h-[80px] rounded-lg border-2 border-dashed border-emerald-500 bg-emerald-50 p-3"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const nodeId = getDraggedNodeId(e);
+            if (!nodeId) return;
+            onDropNode({ nodeId, resourceId: resource.id, kind: "service" });
+          }}
+        >
           {serviceNodes.length === 0 ? (
             <div className="py-4 text-center text-sm italic text-zinc-400">
-              Empty
+              Drop a node here to allocate it into service
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -43,10 +63,7 @@ export function ResourceCard({
                   key={n.id}
                   node={n}
                   context="service"
-                  onAllocate={onAllocate}
-                  onMove={onMove}
                   onComplete={onComplete}
-                  onAddToResource={onMove}
                 />
               ))}
             </div>
@@ -58,10 +75,22 @@ export function ResourceCard({
         <div className="mb-2 text-xs font-semibold tracking-widest text-zinc-500">
           WAITING QUEUE ({waitingNodes.length})
         </div>
-        <div className="min-h-[60px] rounded-lg border-2 border-dashed border-amber-500 bg-amber-50 p-3">
+        <div
+          className="min-h-[60px] rounded-lg border-2 border-dashed border-amber-500 bg-amber-50 p-3"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const nodeId = getDraggedNodeId(e);
+            if (!nodeId) return;
+            onDropNode({ nodeId, resourceId: resource.id, kind: "waiting" });
+          }}
+        >
           {waitingNodes.length === 0 ? (
             <div className="py-4 text-center text-sm italic text-zinc-400">
-              Empty
+              Drop a node here to move it into waiting
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -70,10 +99,7 @@ export function ResourceCard({
                   key={n.id}
                   node={n}
                   context="waiting"
-                  onAllocate={onAllocate}
-                  onMove={onMove}
                   onComplete={onComplete}
-                  onAddToResource={onMove}
                 />
               ))}
             </div>

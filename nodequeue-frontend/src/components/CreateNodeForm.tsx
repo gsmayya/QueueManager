@@ -22,19 +22,30 @@ export function CreateNodeForm({
 
   return (
     <section className="mb-6 rounded-xl bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <form
+        className="flex flex-col gap-3 md:flex-row md:items-center"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (disabled) return;
+          const name = entityName.trim();
+          if (!name) return;
+          onCreate({ entityName: name, resourceId: resourceId || undefined });
+          setEntityName("");
+          setResourceId("");
+        }}
+      >
         <input
           value={entityName}
           onChange={(e) => setEntityName(e.target.value)}
           placeholder="Node name (e.g., task-1)"
-          className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+          className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none"
           disabled={disabled}
         />
 
         <select
           value={resourceId}
           onChange={(e) => setResourceId(e.target.value)}
-          className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none md:w-80"
+          className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-indigo-500 focus:outline-none md:w-80"
           disabled={disabled}
         >
           <option value="">Select resource (optional)</option>
@@ -46,20 +57,13 @@ export function CreateNodeForm({
         </select>
 
         <button
-          type="button"
+          type="submit"
           disabled={disabled}
-          onClick={() => {
-            const name = entityName.trim();
-            if (!name) return;
-            onCreate({ entityName: name, resourceId: resourceId || undefined });
-            setEntityName("");
-            setResourceId("");
-          }}
           className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-300"
         >
           Create Node
         </button>
-      </div>
+      </form>
     </section>
   );
 }

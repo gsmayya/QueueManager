@@ -116,31 +116,6 @@ export function QueueManager() {
     [addApiLog, refresh],
   );
 
-  const onMove = useCallback(
-    async (nodeId: string) => {
-      const targetResourceId = window.prompt("Enter target resource ID:");
-      if (!targetResourceId) return;
-      try {
-        const body = { target_resource_id: targetResourceId };
-        await moveNode(nodeId, targetResourceId);
-        addApiLog({ method: "POST", url: `/nodes/${nodeId}/move`, status: 200, body });
-        setToast({ kind: "success", message: "Node moved successfully" });
-        await refresh({ log: false });
-      } catch (e) {
-        const err = e as Error;
-        addApiLog({
-          method: "POST",
-          url: `/nodes/${nodeId}/move`,
-          status: e instanceof ApiError ? e.status : 0,
-          body: { target_resource_id: targetResourceId },
-          error: err.message,
-        });
-        setToast({ kind: "error", message: err.message });
-      }
-    },
-    [addApiLog, refresh],
-  );
-
   const onAllocate = useCallback(
     async (nodeId: string) => {
       try {
@@ -185,29 +160,51 @@ export function QueueManager() {
     [addApiLog, refresh],
   );
 
-  const onAddToResource = useCallback(
-    async (nodeId: string) => {
-      const resourceId = window.prompt("Enter resource ID:");
-      if (!resourceId) return;
+  const onDropNode = useCallback(
+    async (args: { nodeId: string; resourceId: string; kind: "waiting" | "service" }) => {
+      const { nodeId, resourceId, kind } = args;
+      const current = nodes.find((n) => n.id === nodeId);
       try {
-        const body = { target_resource_id: resourceId };
-        await moveNode(nodeId, resourceId);
-        addApiLog({ method: "POST", url: `/nodes/${nodeId}/move`, status: 200, body });
-        setToast({ kind: "success", message: "Node added to resource successfully" });
+        // 1) Ensure node is assigned to the target resource (Move always enqueues into waiting).
+        if (current?.resource_id !== resourceId) {
+          const body = { target_resource_id: resourceId };
+          await moveNode(nodeId, resourceId);
+          addApiLog({ method: "POST", url: `/nodes/${nodeId}/move`, status: 200, body });
+        } else if (kind === "waiting") {
+          // Dropping into waiting can be used to "de-allocate" within the same resource.
+          // MoveNode removes the node from current queues and re-enqueues into waiting.
+          const body = { target_resource_id: resourceId };
+          await moveNode(nodeId, resourceId);
+          addApiLog({ method: "POST", url: `/nodes/${nodeId}/move`, status: 200, body });
+        }
+
+        // 2) If dropped onto service, allocate into service (capacity enforced by API).
+        if (kind === "service") {
+          await allocateNode(nodeId);
+          addApiLog({ method: "POST", url: `/nodes/${nodeId}/allocate`, status: 200 });
+        }
+
+        setToast({
+          kind: "success",
+          message:
+            kind === "service"
+              ? `Node allocated to ${resourceId}`
+              : `Node moved to waiting in ${resourceId}`,
+        });
         await refresh({ log: false });
       } catch (e) {
         const err = e as Error;
         addApiLog({
-          method: "POST",
-          url: `/nodes/${nodeId}/move`,
+          method: "DND",
+          url: kind === "service" ? `/nodes/${nodeId}/move+allocate` : `/nodes/${nodeId}/move`,
           status: e instanceof ApiError ? e.status : 0,
-          body: { target_resource_id: resourceId },
+          body: { resource_id: resourceId, kind },
           error: err.message,
         });
         setToast({ kind: "error", message: err.message });
       }
     },
-    [addApiLog, refresh],
+    [addApiLog, refresh, nodes],
   );
 
   return (
@@ -237,10 +234,7 @@ export function QueueManager() {
                 key={n.id}
                 node={n}
                 context="unassigned"
-                onAllocate={onAllocate}
-                onMove={onMove}
                 onComplete={onComplete}
-                onAddToResource={onAddToResource}
               />
             ))}
           </div>
@@ -252,9 +246,8 @@ export function QueueManager() {
           <ResourceCard
             key={r.id}
             resource={r}
-            onAllocate={onAllocate}
-            onMove={onMove}
             onComplete={onComplete}
+            onDropNode={onDropNode}
           />
         ))}
       </section>
