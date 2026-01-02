@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { Node, Resource } from "../lib/types";
+import type { Node, NodeMetrics, Resource } from "../lib/types";
 import { NodeCard } from "./NodeCard";
 
 type DropKind = "waiting" | "service";
@@ -18,10 +18,12 @@ export function ResourceCard({
   resource,
   onComplete,
   onDropNode,
+  nodeMetricsById,
 }: {
   resource: Resource;
   onComplete: (nodeId: string) => void;
   onDropNode: (args: { nodeId: string; resourceId: string; kind: DropKind }) => void;
+  nodeMetricsById?: Record<string, NodeMetrics | undefined>;
 }) {
   const serviceNodes: Node[] = resource.nodes ?? [];
   const waitingNodes: Node[] = resource.waiting_queue ?? [];
@@ -64,6 +66,8 @@ export function ResourceCard({
                   node={n}
                   context="service"
                   onComplete={onComplete}
+                  metrics={nodeMetricsById?.[n.id]}
+                  currentResourceId={resource.id}
                 />
               ))}
             </div>
@@ -100,6 +104,8 @@ export function ResourceCard({
                   node={n}
                   context="waiting"
                   onComplete={onComplete}
+                  metrics={nodeMetricsById?.[n.id]}
+                  currentResourceId={resource.id}
                 />
               ))}
             </div>

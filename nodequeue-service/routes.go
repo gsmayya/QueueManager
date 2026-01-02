@@ -15,6 +15,10 @@ import (
 //
 // Note: net/http's DefaultServeMux is used for simplicity.
 func setupRoutes(qs *queueservice.QueueService) {
+	http.HandleFunc("/nodes/metrics", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		qs.NodesMetricsHandler(w, r)
+	}))
+
 	http.HandleFunc("/nodes", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:

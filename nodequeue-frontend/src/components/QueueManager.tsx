@@ -6,13 +6,15 @@ import {
   ApiError,
   completeNode,
   createNode,
+  getNodesMetrics,
   listNodes,
   listResources,
   moveNode,
 } from "../lib/api";
-import type { Node, Resource } from "../lib/types";
+import type { Node, NodeMetrics, NodesMetricsResponse, Resource } from "../lib/types";
 import { ApiLog, type ApiLogEntry } from "./ApiLog";
 import { CreateNodeForm } from "./CreateNodeForm";
+import { NodeMetricsFrame } from "./NodeMetricsFrame";
 import { NodeCard } from "./NodeCard";
 import { ResourceCard } from "./ResourceCard";
 import { Toast } from "./Toast";
@@ -33,6 +35,10 @@ export function QueueManager() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ kind: "error" | "success"; message: string } | null>(null);
   const [apiLogEntries, setApiLogEntries] = useState<ApiLogEntry[]>([]);
+  const [metrics, setMetrics] = useState<NodesMetricsResponse | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [metricsLastUpdated, setMetricsLastUpdated] = useState<string | null>(null);
 
   const addApiLog = useCallback((entry: Omit<ApiLogEntry, "time">) => {
     setApiLogEntries((prev) => {
@@ -88,6 +94,37 @@ export function QueueManager() {
     return () => clearInterval(t);
   }, [refresh]);
 
+  const refreshMetrics = useCallback(async () => {
+    setMetricsLoading(true);
+    setMetricsError(null);
+    try {
+      const data = await getNodesMetrics();
+      setMetrics(data);
+      setMetricsLastUpdated(new Date().toLocaleTimeString());
+    } catch (e) {
+      const err = e as Error;
+      setMetricsError(err.message);
+    } finally {
+      setMetricsLoading(false);
+    }
+  }, []);
+
+  // Poll metrics every 10s.
+  useEffect(() => {
+    refreshMetrics().catch(() => {});
+    const t = setInterval(() => {
+      refreshMetrics().catch(() => {});
+    }, 10000);
+    return () => clearInterval(t);
+  }, [refreshMetrics]);
+
+  const nodeMetricsById = useMemo(() => {
+    const out: Record<string, NodeMetrics> = {};
+    for (const m of metrics?.active_nodes ?? []) out[m.id] = m;
+    for (const m of metrics?.completed_nodes ?? []) out[m.id] = m;
+    return out;
+  }, [metrics]);
+
   const unassignedNodes = useMemo(
     () => nodes.filter((n) => !n.resource_id && !n.completed),
     [nodes],
@@ -108,27 +145,6 @@ export function QueueManager() {
           url: "/nodes",
           status: e instanceof ApiError ? e.status : 0,
           body: { entity_name: entityName, ...(resourceId ? { resource_id: resourceId } : {}) },
-          error: err.message,
-        });
-        setToast({ kind: "error", message: err.message });
-      }
-    },
-    [addApiLog, refresh],
-  );
-
-  const onAllocate = useCallback(
-    async (nodeId: string) => {
-      try {
-        await allocateNode(nodeId);
-        addApiLog({ method: "POST", url: `/nodes/${nodeId}/allocate`, status: 200 });
-        setToast({ kind: "success", message: "Node allocated successfully" });
-        await refresh({ log: false });
-      } catch (e) {
-        const err = e as Error;
-        addApiLog({
-          method: "POST",
-          url: `/nodes/${nodeId}/allocate`,
-          status: e instanceof ApiError ? e.status : 0,
           error: err.message,
         });
         setToast({ kind: "error", message: err.message });
@@ -235,6 +251,7 @@ export function QueueManager() {
                 node={n}
                 context="unassigned"
                 onComplete={onComplete}
+                metrics={nodeMetricsById[n.id]}
               />
             ))}
           </div>
@@ -248,9 +265,17 @@ export function QueueManager() {
             resource={r}
             onComplete={onComplete}
             onDropNode={onDropNode}
+            nodeMetricsById={nodeMetricsById}
           />
         ))}
       </section>
+
+      <NodeMetricsFrame
+        metrics={metrics}
+        loading={metricsLoading}
+        error={metricsError}
+        lastUpdatedAt={metricsLastUpdated}
+      />
 
       <ApiLog entries={apiLogEntries} onClear={() => setApiLogEntries([])} />
     </div>

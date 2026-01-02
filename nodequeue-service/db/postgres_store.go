@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"nodequeue-service/resource"
@@ -91,6 +93,62 @@ func (s *PostgresStore) ListLatestNodeStates(ctx context.Context) (map[string]No
 			kind = QueueKindService
 		}
 		out[nodeID] = NodeState{Queue: kind, TS: ts}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (s *PostgresStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]NodeLogRow, error) {
+	out := make(map[string][]NodeLogRow)
+	if len(nodeIDs) == 0 {
+		return out, nil
+	}
+
+	// Build a safe IN list: ($1::uuid, $2::uuid, ...)
+	var b strings.Builder
+	b.WriteString(`
+		SELECT node_id::text, action, resource_id, ts
+		FROM node_logs
+		WHERE node_id IN (`)
+	args := make([]any, 0, len(nodeIDs))
+	for i, id := range nodeIDs {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(fmt.Sprintf("$%d::uuid", i+1))
+		args = append(args, id)
+	}
+	b.WriteString(`)
+		ORDER BY node_id, ts ASC
+	`)
+
+	rows, err := s.db.QueryContext(ctx, b.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var nodeID string
+		var action string
+		var rid sql.NullString
+		var ts time.Time
+		if err := rows.Scan(&nodeID, &action, &rid, &ts); err != nil {
+			return nil, err
+		}
+		var rp *string
+		if rid.Valid {
+			v := rid.String
+			rp = &v
+		}
+		out[nodeID] = append(out[nodeID], NodeLogRow{
+			NodeID:     nodeID,
+			Action:     action,
+			ResourceID: rp,
+			TS:         ts,
+		})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

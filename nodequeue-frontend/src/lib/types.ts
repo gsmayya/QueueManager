@@ -30,4 +30,25 @@ export type ErrorResponse = {
   error: string;
 };
 
+export type WaitingSegment = {
+  resource_id: string;
+  start_ts: string;
+  end_ts: string;
+  duration_ms: number;
+};
+
+export type NodeMetrics = {
+  id: string;
+  entity_name: string;
+  created_at: string;
+  completed: boolean;
+  total_time_in_system_ms: number;
+  waiting_segments: WaitingSegment[];
+};
+
+export type NodesMetricsResponse = {
+  active_nodes: NodeMetrics[];
+  completed_nodes: NodeMetrics[];
+};
+
 

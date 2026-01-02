@@ -28,6 +28,10 @@ func (s *stubStore) ListLatestNodeStates(ctx context.Context) (map[string]db.Nod
 	return s.states, nil
 }
 
+func (s *stubStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]db.NodeLogRow, error) {
+	return map[string][]db.NodeLogRow{}, nil
+}
+
 func (s *stubStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName string, createdAt time.Time) error {
 	return nil
 }

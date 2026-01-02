@@ -1,4 +1,4 @@
-import type { ErrorResponse, Node, Resource } from "./types";
+import type { ErrorResponse, Node, NodesMetricsResponse, Resource } from "./types";
 
 export class ApiError extends Error {
   status: number;
@@ -56,6 +56,10 @@ export async function listResources(): Promise<Resource[]> {
 
 export async function listNodes(): Promise<Node[]> {
   return requestJson<Node[]>("/nodes", { method: "GET" });
+}
+
+export async function getNodesMetrics(): Promise<NodesMetricsResponse> {
+  return requestJson<NodesMetricsResponse>("/nodes/metrics", { method: "GET" });
 }
 
 export async function createNode(entityName: string, resourceId?: string): Promise<Node> {
