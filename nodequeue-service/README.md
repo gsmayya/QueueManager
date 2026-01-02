@@ -37,6 +37,15 @@ Content-Type: application/json
 GET /nodes
 ```
 
+### Get Node Metrics (Timers)
+Returns computed timing information for all nodes:
+- `total_time_in_system_ms`: time since creation (freezes when completed)
+- `waiting_segments[]`: time spent waiting per resource visit (stops when allocated into service)
+
+```
+GET /nodes/metrics
+```
+
 ### Get Node by ID
 ```
 GET /nodes/{id}
@@ -50,6 +59,12 @@ Content-Type: application/json
 {
   "target_resource_id": "resource-1"
 }
+```
+
+### Allocate Node to Service Queue
+Promotes a node from its assigned resource's waiting queue to its service queue (capacity enforced).
+```
+POST /nodes/{id}/allocate
 ```
 
 ### Complete Node
@@ -121,6 +136,11 @@ curl -X POST http://localhost:8080/nodes/{node-id}/move \
   -d '{"target_resource_id": "resource-1"}'
 ```
 
+### Allocate a node into service
+```bash
+curl -X POST http://localhost:8080/nodes/{node-id}/allocate
+```
+
 ### Complete a node
 ```bash
 curl -X POST http://localhost:8080/nodes/{node-id}/complete
@@ -129,6 +149,11 @@ curl -X POST http://localhost:8080/nodes/{node-id}/complete
 ### List all nodes
 ```bash
 curl http://localhost:8080/nodes
+```
+
+### Get node timers/metrics
+```bash
+curl http://localhost:8080/nodes/metrics
 ```
 
 ### List all resources

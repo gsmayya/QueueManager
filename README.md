@@ -18,6 +18,11 @@ UI is used for simulating and visualizing the queue manager system and to do tes
   - Allocate nodes from waiting queue to service queue (respects capacity limits)
   - Complete nodes (removes them from resources)
 
+- **Node Timers / Metrics**:
+  - Shows total time in system per node (from creation until completion)
+  - Shows time spent waiting per resource (a node can visit the same resource multiple times; each visit is tracked)
+  - Metrics panel refreshes every 10 seconds
+
 - **Real-time Updates**: The UI automatically refreshes every 2 seconds to show the latest state
 
 ## Usage 
@@ -85,6 +90,7 @@ Each node displays action buttons based on its state:
 The UI uses the following API endpoints:
 - `GET /resources` - List all resources
 - `GET /nodes` - List all nodes
+- `GET /nodes/metrics` - List all node metrics (total time in system + per-resource waiting time)
 - `POST /nodes` - Create a new node (with optional `resource_id`)
 - `POST /nodes/{id}/move` - Move a node to another resource
 - `POST /nodes/{id}/allocate` - Allocate a waiting node to service queue
