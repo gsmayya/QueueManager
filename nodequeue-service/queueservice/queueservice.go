@@ -28,10 +28,11 @@ import (
 // - Moving/assigning a node to a resource places it into that resource's waiting queue.
 // - Allocation (waiting -> service) is where capacity is enforced.
 type QueueService struct {
-	resources map[string]*resource.Resource
-	nodes     map[string]*node.Node
-	store     db.Store
-	mu        sync.RWMutex
+	resources    map[string]*resource.Resource
+	nodes        map[string]*node.Node
+	store        db.Store
+	sessionStart time.Time
+	mu           sync.RWMutex
 }
 
 // NewQueueService constructs a QueueService with initialized maps.
@@ -43,9 +44,10 @@ func NewQueueService() *QueueService {
 // The store is used on a best-effort basis to avoid changing API behavior if the DB is down.
 func NewQueueServiceWithStore(store db.Store) *QueueService {
 	return &QueueService{
-		resources: make(map[string]*resource.Resource),
-		nodes:     make(map[string]*node.Node),
-		store:     store,
+		resources:    make(map[string]*resource.Resource),
+		nodes:        make(map[string]*node.Node),
+		store:        store,
+		sessionStart: time.Now(),
 	}
 }
 

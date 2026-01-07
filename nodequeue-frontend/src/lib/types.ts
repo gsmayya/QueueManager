@@ -51,4 +51,24 @@ export type NodesMetricsResponse = {
   completed_nodes: NodeMetrics[];
 };
 
+export type ResourceSessionMetrics = {
+  resource_id: string;
+  total_added: number;
+  total_allocated: number;
+  current_waiting: number;
+  current_allocated: number;
+  waiting_segments_count: number;
+  waiting_total_ms: number;
+  avg_waiting_time_ms: number;
+  service_segments_count: number;
+  service_total_ms: number;
+  avg_service_time_ms: number;
+};
+
+export type ResourcesSessionMetricsResponse = {
+  session_start: string;
+  now: string;
+  resources: ResourceSessionMetrics[];
+};
+
 

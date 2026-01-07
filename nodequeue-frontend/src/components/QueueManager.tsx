@@ -7,16 +7,18 @@ import {
   completeNode,
   createNode,
   getNodesMetrics,
+  getResourcesMetrics,
   listNodes,
   listResources,
   moveNode,
 } from "../lib/api";
-import type { Node, NodeMetrics, NodesMetricsResponse, Resource } from "../lib/types";
+import type { Node, NodeMetrics, NodesMetricsResponse, Resource, ResourcesSessionMetricsResponse } from "../lib/types";
 import { ApiLog, type ApiLogEntry } from "./ApiLog";
 import { CreateNodeForm } from "./CreateNodeForm";
 import { NodeMetricsFrame } from "./NodeMetricsFrame";
 import { NodeCard } from "./NodeCard";
 import { ResourceCard } from "./ResourceCard";
+import { ResourceMetricsFrame } from "./ResourceMetricsFrame";
 import { Toast } from "./Toast";
 
 function nowTime(): string {
@@ -39,6 +41,10 @@ export function QueueManager() {
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const [metricsLastUpdated, setMetricsLastUpdated] = useState<string | null>(null);
+  const [resourceMetrics, setResourceMetrics] = useState<ResourcesSessionMetricsResponse | null>(null);
+  const [resourceMetricsLoading, setResourceMetricsLoading] = useState(false);
+  const [resourceMetricsError, setResourceMetricsError] = useState<string | null>(null);
+  const [resourceMetricsLastUpdated, setResourceMetricsLastUpdated] = useState<string | null>(null);
 
   const addApiLog = useCallback((entry: Omit<ApiLogEntry, "time">) => {
     setApiLogEntries((prev) => {
@@ -117,6 +123,30 @@ export function QueueManager() {
     }, 10000);
     return () => clearInterval(t);
   }, [refreshMetrics]);
+
+  const refreshResourceMetrics = useCallback(async () => {
+    setResourceMetricsLoading(true);
+    setResourceMetricsError(null);
+    try {
+      const data = await getResourcesMetrics();
+      setResourceMetrics(data);
+      setResourceMetricsLastUpdated(new Date().toLocaleTimeString());
+    } catch (e) {
+      const err = e as Error;
+      setResourceMetricsError(err.message);
+    } finally {
+      setResourceMetricsLoading(false);
+    }
+  }, []);
+
+  // Poll resource metrics every 10s.
+  useEffect(() => {
+    refreshResourceMetrics().catch(() => {});
+    const t = setInterval(() => {
+      refreshResourceMetrics().catch(() => {});
+    }, 10000);
+    return () => clearInterval(t);
+  }, [refreshResourceMetrics]);
 
   const nodeMetricsById = useMemo(() => {
     const out: Record<string, NodeMetrics> = {};
@@ -269,6 +299,13 @@ export function QueueManager() {
           />
         ))}
       </section>
+
+      <ResourceMetricsFrame
+        metrics={resourceMetrics}
+        loading={resourceMetricsLoading}
+        error={resourceMetricsError}
+        lastUpdatedAt={resourceMetricsLastUpdated}
+      />
 
       <NodeMetricsFrame
         metrics={metrics}

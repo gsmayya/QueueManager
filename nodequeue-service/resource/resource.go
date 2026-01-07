@@ -27,6 +27,13 @@ type Resource struct {
 	mu           sync.RWMutex
 }
 
+// QueueCounts returns the current sizes of the waiting and service queues.
+func (r *Resource) QueueCounts() (waiting int, service int) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.WaitingQueue), len(r.Nodes)
+}
+
 // IsInService reports whether the given node ID is currently in the service queue.
 func (r *Resource) IsInService(nodeID string) bool {
 	r.mu.RLock()

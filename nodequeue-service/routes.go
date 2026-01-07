@@ -19,6 +19,10 @@ func setupRoutes(qs *queueservice.QueueService) {
 		qs.NodesMetricsHandler(w, r)
 	}))
 
+	http.HandleFunc("/resources/metrics", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		qs.ResourcesMetricsHandler(w, r)
+	}))
+
 	http.HandleFunc("/nodes", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
