@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"nodequeue-service/db"
-	nodepkg "nodequeue-service/node"
 	queueservicepkg "nodequeue-service/queueservice"
 	resourcepkg "nodequeue-service/resource"
 )
@@ -44,8 +43,6 @@ func (s *stubStore) MarkNodeCompleted(ctx context.Context, nodeID string, comple
 func (s *stubStore) InsertNodeLog(ctx context.Context, nodeID, action string, resourceID *string, ts time.Time) error {
 	return nil
 }
-
-func ptr[T any](v T) *T { return &v }
 
 func TestRestoreFromStore_RebuildsQueuesAndOrder(t *testing.T) {
 	base := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -98,12 +95,4 @@ func TestRestoreFromStore_RebuildsQueuesAndOrder(t *testing.T) {
 	if len(room2.WaitingQueue) != 1 || room2.WaitingQueue[0].ID != "n_room2" {
 		t.Fatalf("expected Room 2 waiting queue [n_room2], got %v", ids(room2.WaitingQueue))
 	}
-}
-
-func ids(ns []*nodepkg.Node) []string {
-	out := make([]string, 0, len(ns))
-	for _, n := range ns {
-		out = append(out, n.ID)
-	}
-	return out
 }

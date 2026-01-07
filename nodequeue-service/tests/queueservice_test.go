@@ -119,6 +119,40 @@ func TestQueueService_MoveNode(t *testing.T) {
 	}
 }
 
+func TestQueueService_MoveNode_FromServiceQueue_RemovesFromServiceAndEnqueuesWaiting(t *testing.T) {
+	qs := queueservicepkg.NewQueueService()
+	r1 := resourcepkg.NewResource("resource-1", 1)
+	r2 := resourcepkg.NewResource("resource-2", 1)
+	qs.AddResource(r1)
+	qs.AddResource(r2)
+
+	n, _ := qs.CreateNode("test-entity")
+	if err := qs.MoveNode(n.ID, r1.ID); err != nil {
+		t.Fatalf("MoveNode r1 failed: %v", err)
+	}
+	if err := qs.AllocateNode(n.ID); err != nil {
+		t.Fatalf("AllocateNode failed: %v", err)
+	}
+	// Sanity: in service queue
+	if !r1.IsInService(n.ID) {
+		t.Fatalf("expected node to be in service queue of %s", r1.ID)
+	}
+
+	// Move to r2: should remove from service in r1 and enqueue into waiting in r2.
+	if err := qs.MoveNode(n.ID, r2.ID); err != nil {
+		t.Fatalf("MoveNode r2 failed: %v", err)
+	}
+	if r1.GetNode(n.ID) != nil {
+		t.Fatalf("expected node removed from %s queues", r1.ID)
+	}
+	if r2.GetNode(n.ID) == nil {
+		t.Fatalf("expected node present in %s queues", r2.ID)
+	}
+	if r2.IsInService(n.ID) {
+		t.Fatalf("expected node to be waiting (not in service) in %s after move", r2.ID)
+	}
+}
+
 func TestQueueService_MoveNode_Errors(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
 	resource1 := resourcepkg.NewResource("resource-1", 1)
@@ -192,6 +226,21 @@ func TestQueueService_AllocateNode_Errors(t *testing.T) {
 	}
 	if err := qs.AllocateNode(node2.ID); err == nil {
 		t.Error("Should return error when allocating over capacity")
+	}
+}
+
+func TestQueueService_AllocateNode_AlreadyInService_Errors(t *testing.T) {
+	qs := queueservicepkg.NewQueueService()
+	r1 := resourcepkg.NewResource("resource-1", 2)
+	qs.AddResource(r1)
+
+	n, _ := qs.CreateNode("entity-1")
+	_ = qs.MoveNode(n.ID, r1.ID)
+	if err := qs.AllocateNode(n.ID); err != nil {
+		t.Fatalf("first allocation should succeed: %v", err)
+	}
+	if err := qs.AllocateNode(n.ID); err == nil {
+		t.Fatalf("expected error allocating node already in service")
 	}
 }
 
