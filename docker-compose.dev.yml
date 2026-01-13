@@ -12,7 +12,7 @@ services:
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
 
   queue-service:
-    image: golang:1.24-alpine
+    image: golang:1.25-alpine
     working_dir: /app/queue-service
     environment:
       - PORT=8080
@@ -35,7 +35,7 @@ services:
     command: sh -c "go mod download && go run ."
 
   queue-admin:
-    image: golang:1.24-alpine
+    image: golang:1.25-alpine
     working_dir: /app/queue-admin
     environment:
       - PORT=8081

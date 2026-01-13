@@ -35,19 +35,21 @@ func setupRoutes(qs *queueservice.QueueService) {
 	}))
 
 	http.HandleFunc("/nodes/", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/nodes/")
-		parts := strings.Split(path, "/")
-
-		if len(parts) == 0 || parts[0] == "" {
+		path, ok := strings.CutPrefix(r.URL.Path, "/nodes/")
+		if !ok || path == "" {
 			qs.ListNodesHandler(w, r)
 			return
 		}
 
-		nodeID := parts[0]
+		nodeID, rest, _ := strings.Cut(path, "/")
+		if nodeID == "" {
+			qs.ListNodesHandler(w, r)
+			return
+		}
 
 		// Handle sub-routes: /nodes/{id}/move or /nodes/{id}/complete
-		if len(parts) == 2 {
-			switch parts[1] {
+		if rest != "" && !strings.Contains(rest, "/") {
+			switch rest {
 			case "move":
 				if r.Method == http.MethodPost {
 					qs.MoveNodeHandler(w, r, nodeID)

@@ -3,12 +3,12 @@ package queueservice
 import (
 	"log"
 	"net/http"
-	"sort"
+	"slices"
 	"time"
 
+	"queue-common/utils"
 	"queue-service/node"
 	"queue-service/store"
-	"queue-common/utils"
 )
 
 // NodesMetricsHandler handles GET /nodes/metrics.
@@ -84,8 +84,24 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Stable output ordering.
-	sort.SliceStable(active, func(i, j int) bool { return active[i].CreatedAt.Before(active[j].CreatedAt) })
-	sort.SliceStable(completed, func(i, j int) bool { return completed[i].CreatedAt.Before(completed[j].CreatedAt) })
+	slices.SortStableFunc(active, func(a, b NodeMetrics) int {
+		if a.CreatedAt.Before(b.CreatedAt) {
+			return -1
+		}
+		if b.CreatedAt.Before(a.CreatedAt) {
+			return 1
+		}
+		return 0
+	})
+	slices.SortStableFunc(completed, func(a, b NodeMetrics) int {
+		if a.CreatedAt.Before(b.CreatedAt) {
+			return -1
+		}
+		if b.CreatedAt.Before(a.CreatedAt) {
+			return 1
+		}
+		return 0
+	})
 
 	resp := NodesMetricsResponse{
 		ActiveNodes:    active,

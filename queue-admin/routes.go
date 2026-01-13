@@ -28,13 +28,12 @@ func setupRoutes(svc *handlers.Service) {
 	}))
 
 	http.HandleFunc("/entities/", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/entities/")
-		parts := strings.Split(path, "/")
-		if len(parts) == 0 || parts[0] == "" {
+		path, ok := strings.CutPrefix(r.URL.Path, "/entities/")
+		id, _, _ := strings.Cut(path, "/")
+		if !ok || id == "" {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		id := parts[0]
 		switch r.Method {
 		case http.MethodGet:
 			svc.GetEntity(w, r, id)
@@ -59,13 +58,12 @@ func setupRoutes(svc *handlers.Service) {
 	}))
 
 	http.HandleFunc("/users/", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/users/")
-		parts := strings.Split(path, "/")
-		if len(parts) == 0 || parts[0] == "" {
+		path, ok := strings.CutPrefix(r.URL.Path, "/users/")
+		id, _, _ := strings.Cut(path, "/")
+		if !ok || id == "" {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		id := parts[0]
 		switch r.Method {
 		case http.MethodGet:
 			svc.GetUser(w, r, id)
@@ -90,13 +88,12 @@ func setupRoutes(svc *handlers.Service) {
 	}))
 
 	http.HandleFunc("/rooms/", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/rooms/")
-		parts := strings.Split(path, "/")
-		if len(parts) == 0 || parts[0] == "" {
+		path, ok := strings.CutPrefix(r.URL.Path, "/rooms/")
+		id, _, _ := strings.Cut(path, "/")
+		if !ok || id == "" {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		id := parts[0]
 		switch r.Method {
 		case http.MethodGet:
 			svc.GetRoom(w, r, id)

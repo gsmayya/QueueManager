@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
+	"queue-common/utils"
 	"queue-service/node"
 	"queue-service/resource"
 	"queue-service/store"
-	"queue-common/utils"
 
 	"github.com/google/uuid"
 )
@@ -458,7 +458,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 			utils.RespondWithError(w, http.StatusBadRequest, "node_name must be 4 digits")
 			return
 		}
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			if req.NodeName[i] < '0' || req.NodeName[i] > '9' {
 				utils.RespondWithError(w, http.StatusBadRequest, "node_name must be 4 digits")
 				return

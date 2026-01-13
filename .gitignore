@@ -78,3 +78,6 @@ out/
 
 nodequeue-master-service/nodequeue-master-service 
 nodequeue-service/nodequeue-service
+
+.cursor/
+.tmp/

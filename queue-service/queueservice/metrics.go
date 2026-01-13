@@ -1,7 +1,7 @@
 package queueservice
 
 import (
-	"sort"
+	"slices"
 	"time"
 
 	"queue-service/node"
@@ -77,7 +77,15 @@ func toNodeEventsFromDB(rows []store.NodeLogRow) []nodeEvent {
 
 func computeNodeMetrics(now time.Time, n nodeSnapshot, events []nodeEvent) NodeMetrics {
 	// Sort to make computation deterministic even if logs are appended out-of-order.
-	sort.SliceStable(events, func(i, j int) bool { return events[i].TS.Before(events[j].TS) })
+	slices.SortStableFunc(events, func(a, b nodeEvent) int {
+		if a.TS.Before(b.TS) {
+			return -1
+		}
+		if b.TS.Before(a.TS) {
+			return 1
+		}
+		return 0
+	})
 
 	segments := make([]WaitingSegment, 0)
 	openIdx := -1

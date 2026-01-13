@@ -1,7 +1,7 @@
 package queueservice
 
 import (
-	"sort"
+	"slices"
 	"time"
 )
 
@@ -50,7 +50,15 @@ type ResourcesSessionMetricsResponse struct {
 
 func computeServiceSegments(now time.Time, events []nodeEvent) []ServiceSegment {
 	// Sort to make computation deterministic even if logs are appended out-of-order.
-	sort.SliceStable(events, func(i, j int) bool { return events[i].TS.Before(events[j].TS) })
+	slices.SortStableFunc(events, func(a, b nodeEvent) int {
+		if a.TS.Before(b.TS) {
+			return -1
+		}
+		if b.TS.Before(a.TS) {
+			return 1
+		}
+		return 0
+	})
 
 	segments := make([]ServiceSegment, 0)
 	openIdx := -1
@@ -193,7 +201,15 @@ func computeResourcesSessionMetrics(
 		out = append(out, a.m)
 	}
 
-	sort.SliceStable(out, func(i, j int) bool { return out[i].ResourceID < out[j].ResourceID })
+	slices.SortStableFunc(out, func(a, b ResourceSessionMetrics) int {
+		if a.ResourceID < b.ResourceID {
+			return -1
+		}
+		if b.ResourceID < a.ResourceID {
+			return 1
+		}
+		return 0
+	})
 
 	return ResourcesSessionMetricsResponse{
 		SessionStart: sessionStart,
