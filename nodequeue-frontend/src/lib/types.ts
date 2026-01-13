@@ -1,4 +1,5 @@
 export type Entity = {
+  id?: string;
   name: string;
 };
 
@@ -11,6 +12,7 @@ export type NodeLog = {
 export type Node = {
   id: string;
   entity: Entity;
+  node_name?: string;
   resource_id?: string;
   completed: boolean;
   created_at: string;
@@ -19,6 +21,7 @@ export type Node = {
 
 export type Resource = {
   id: string;
+  name?: string;
   capacity: number;
   // Service queue (consumes capacity)
   nodes: Node[];
@@ -69,6 +72,32 @@ export type ResourcesSessionMetricsResponse = {
   session_start: string;
   now: string;
   resources: ResourceSessionMetrics[];
+};
+
+// --- Admin (master-service)
+
+export type AdminEntity = {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  joining_date: string;
+};
+
+export type AdminUser = {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  created_at: string;
+};
+
+export type AdminRoom = {
+  id: string;
+  name: string;
+  capacity: number;
+  deleted_at?: string;
+  created_at: string;
 };
 
 

@@ -18,7 +18,9 @@ import (
 //
 // Nodes are typically added to WaitingQueue first, then promoted into Nodes via AllocateWaitingNode.
 type Resource struct {
-	ID       string `json:"id"`
+	ID string `json:"id"`
+	// Name is the mutable display name. ID is the stable identifier.
+	Name     string `json:"name"`
 	Capacity int    `json:"capacity"`
 	// Nodes represents the service queue (nodes currently consuming capacity)
 	Nodes []*node.Node `json:"nodes"`
@@ -51,6 +53,7 @@ func (r *Resource) IsInService(nodeID string) bool {
 func NewResource(id string, capacity int) *Resource {
 	return &Resource{
 		ID:           id,
+		Name:         id,
 		Capacity:     capacity,
 		Nodes:        make([]*node.Node, 0),
 		WaitingQueue: make([]*node.Node, 0),

@@ -8,6 +8,7 @@ import (
 // Entity is the domain object referenced by a Node.
 // In this service it's intentionally minimal (just a name) and is embedded in API payloads.
 type Entity struct {
+	ID   string `json:"id,omitempty"`
 	Name string `json:"name"`
 }
 
@@ -23,6 +24,8 @@ type Entity struct {
 type Node struct {
 	ID     string  `json:"id"`
 	Entity *Entity `json:"entity"`
+	// NodeName is a 4-digit identifier displayed in the UI (stable for the node lifecycle).
+	NodeName string `json:"node_name,omitempty"`
 	//TODO: Fix this to be current resource
 	ResourceID  string    `json:"resource_id,omitempty"`
 	Completed   bool      `json:"completed"`
@@ -56,7 +59,12 @@ func (n *Node) AddLog(action, resourceID string) {
 // If ResourceID is provided, the newly created node is immediately assigned to that resource's
 // waiting queue (via MoveNode).
 type CreateNodeRequest struct {
-	EntityName string `json:"entity_name"`
+	// Legacy/compat: used when EntityID is not provided.
+	EntityName string `json:"entity_name,omitempty"`
+	// New flow: master-service entity UUID.
+	EntityID string `json:"entity_id,omitempty"`
+	// New flow: 4-digit node name (UI generated).
+	NodeName   string `json:"node_name,omitempty"`
 	ResourceID string `json:"resource_id,omitempty"` // Optional: add to resource immediately
 }
 

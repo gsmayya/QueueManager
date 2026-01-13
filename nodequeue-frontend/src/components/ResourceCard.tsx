@@ -31,7 +31,7 @@ export function ResourceCard({
   return (
     <div className="rounded-xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="mb-4 flex items-center justify-between border-b border-zinc-100 pb-4">
-        <div className="text-lg font-semibold text-zinc-900">{resource.id}</div>
+        <div className="text-lg font-semibold text-zinc-900">{resource.name || resource.id}</div>
         <div className="rounded-full bg-indigo-600 px-3 py-1 text-sm font-semibold text-white">
           {serviceNodes.length} / {resource.capacity}
         </div>

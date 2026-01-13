@@ -19,7 +19,7 @@ func NewPostgresStore(db *sql.DB) *PostgresStore {
 }
 
 func (s *PostgresStore) ListResources(ctx context.Context) ([]*resource.Resource, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, capacity FROM resources ORDER BY id`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, capacity FROM resources WHERE deleted_at IS NULL ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -28,11 +28,14 @@ func (s *PostgresStore) ListResources(ctx context.Context) ([]*resource.Resource
 	out := make([]*resource.Resource, 0)
 	for rows.Next() {
 		var id string
+		var name string
 		var cap int
-		if err := rows.Scan(&id, &cap); err != nil {
+		if err := rows.Scan(&id, &name, &cap); err != nil {
 			return nil, err
 		}
-		out = append(out, resource.NewResource(id, cap))
+		r := resource.NewResource(id, cap)
+		r.Name = name
+		out = append(out, r)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -42,7 +45,7 @@ func (s *PostgresStore) ListResources(ctx context.Context) ([]*resource.Resource
 
 func (s *PostgresStore) ListNodes(ctx context.Context) ([]PersistedNode, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT n.id::text, e.name, n.resource_id, n.completed, n.created_at
+		SELECT n.id::text, n.entity_id::text, e.name, COALESCE(n.node_name, ''), n.resource_id, n.completed, n.created_at
 		FROM nodes n
 		JOIN entities e ON e.id = n.entity_id
 		WHERE n.completed = false
@@ -56,7 +59,7 @@ func (s *PostgresStore) ListNodes(ctx context.Context) ([]PersistedNode, error) 
 	out := make([]PersistedNode, 0)
 	for rows.Next() {
 		var pn PersistedNode
-		if err := rows.Scan(&pn.NodeID, &pn.EntityName, &pn.ResourceID, &pn.Completed, &pn.CreatedAt); err != nil {
+		if err := rows.Scan(&pn.NodeID, &pn.EntityID, &pn.EntityName, &pn.NodeName, &pn.ResourceID, &pn.Completed, &pn.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, pn)
@@ -156,7 +159,7 @@ func (s *PostgresStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map
 	return out, nil
 }
 
-func (s *PostgresStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName string, createdAt time.Time) error {
+func (s *PostgresStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -172,9 +175,9 @@ func (s *PostgresStore) PersistNodeCreated(ctx context.Context, nodeID, entityID
 	}
 
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO nodes (id, entity_id, completed, created_at) VALUES ($1::uuid, $2::uuid, false, $3)
+		`INSERT INTO nodes (id, entity_id, node_name, completed, created_at) VALUES ($1::uuid, $2::uuid, $3, false, $4)
 		 ON CONFLICT (id) DO NOTHING`,
-		nodeID, entityID, createdAt,
+		nodeID, entityID, nodeName, createdAt,
 	); err != nil {
 		return err
 	}

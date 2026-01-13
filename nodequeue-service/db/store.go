@@ -9,7 +9,9 @@ import (
 
 type PersistedNode struct {
 	NodeID     string
+	EntityID   string
 	EntityName string
+	NodeName   string
 	ResourceID *string
 	Completed  bool
 	CreatedAt  time.Time
@@ -44,7 +46,7 @@ type Store interface {
 	ListLatestNodeStates(ctx context.Context) (map[string]NodeState, error)
 	ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]NodeLogRow, error)
 
-	PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName string, createdAt time.Time) error
+	PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error
 	UpdateNodeResource(ctx context.Context, nodeID string, resourceID *string) error
 	MarkNodeCompleted(ctx context.Context, nodeID string, completed bool) error
 	InsertNodeLog(ctx context.Context, nodeID, action string, resourceID *string, ts time.Time) error

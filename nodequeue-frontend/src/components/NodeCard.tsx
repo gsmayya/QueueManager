@@ -86,8 +86,17 @@ export function NodeCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold">{node.entity?.name ?? "node"}</div>
-          <div className="text-xs text-white/80">{shortId(node.id)}</div>
+          <div className="text-sm font-semibold">{node.node_name || node.entity?.name || "node"}</div>
+          <div className="text-xs text-white/80">
+            {node.node_name ? (
+              <>
+                <span className="mr-2">{node.entity?.name || "—"}</span>
+                <span className="font-mono">{shortId(node.id)}</span>
+              </>
+            ) : (
+              <span className="font-mono">{shortId(node.id)}</span>
+            )}
+          </div>
         </div>
       </div>
 

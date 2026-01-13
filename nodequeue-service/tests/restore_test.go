@@ -31,7 +31,7 @@ func (s *stubStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[str
 	return map[string][]db.NodeLogRow{}, nil
 }
 
-func (s *stubStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName string, createdAt time.Time) error {
+func (s *stubStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error {
 	return nil
 }
 func (s *stubStore) UpdateNodeResource(ctx context.Context, nodeID string, resourceID *string) error {
@@ -49,11 +49,11 @@ func TestRestoreFromStore_RebuildsQueuesAndOrder(t *testing.T) {
 
 	store := &stubStore{
 		nodes: []db.PersistedNode{
-			{NodeID: "n_wait_1", EntityName: "e1", ResourceID: ptr("Room 1"), Completed: false, CreatedAt: base.Add(1 * time.Minute)},
-			{NodeID: "n_wait_2", EntityName: "e2", ResourceID: ptr("Room 1"), Completed: false, CreatedAt: base.Add(2 * time.Minute)},
-			{NodeID: "n_svc", EntityName: "e3", ResourceID: ptr("Room 1"), Completed: false, CreatedAt: base.Add(3 * time.Minute)},
-			{NodeID: "n_room2", EntityName: "e4", ResourceID: ptr("Room 2"), Completed: false, CreatedAt: base.Add(4 * time.Minute)},
-			{NodeID: "n_unassigned", EntityName: "e5", ResourceID: nil, Completed: false, CreatedAt: base.Add(5 * time.Minute)},
+			{NodeID: "n_wait_1", EntityID: "e1-id", EntityName: "e1", NodeName: "0001", ResourceID: ptr("Room 1"), Completed: false, CreatedAt: base.Add(1 * time.Minute)},
+			{NodeID: "n_wait_2", EntityID: "e2-id", EntityName: "e2", NodeName: "0002", ResourceID: ptr("Room 1"), Completed: false, CreatedAt: base.Add(2 * time.Minute)},
+			{NodeID: "n_svc", EntityID: "e3-id", EntityName: "e3", NodeName: "0003", ResourceID: ptr("Room 1"), Completed: false, CreatedAt: base.Add(3 * time.Minute)},
+			{NodeID: "n_room2", EntityID: "e4-id", EntityName: "e4", NodeName: "0004", ResourceID: ptr("Room 2"), Completed: false, CreatedAt: base.Add(4 * time.Minute)},
+			{NodeID: "n_unassigned", EntityID: "e5-id", EntityName: "e5", NodeName: "0005", ResourceID: nil, Completed: false, CreatedAt: base.Add(5 * time.Minute)},
 		},
 		states: map[string]db.NodeState{
 			// Waiting order should be by TS asc: n_wait_2 (ts=10s) then n_wait_1 (ts=20s)

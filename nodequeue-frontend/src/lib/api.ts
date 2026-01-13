@@ -77,6 +77,24 @@ export async function createNode(entityName: string, resourceId?: string): Promi
   });
 }
 
+export async function createNodeFromEntity(args: {
+  entity_id: string;
+  node_name: string;
+  resource_id?: string;
+}): Promise<Node> {
+  // Keep legacy field entity_name for backward compatibility; backend ignores it when entity_id is provided.
+  return requestJson<Node>("/nodes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      entity_id: args.entity_id,
+      node_name: args.node_name,
+      entity_name: args.node_name,
+      ...(args.resource_id ? { resource_id: args.resource_id } : {}),
+    }),
+  });
+}
+
 export async function moveNode(nodeId: string, targetResourceId: string): Promise<Node> {
   return requestJson<Node>(`/nodes/${nodeId}/move`, {
     method: "POST",

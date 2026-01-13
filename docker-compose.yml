@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_DB=nodequeue
       - POSTGRES_USER=nodequeue
@@ -9,7 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - nodequeue_db_data:/var/lib/postgresql/data
-      - ./nodequeue-service/db/init:/docker-entrypoint-initdb.d:ro
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nodequeue -d nodequeue"]
       interval: 5s
@@ -27,8 +27,33 @@ services:
       - DB_NAME=nodequeue
       - DB_USER=nodequeue
       - DB_PASSWORD=nodequeue
+      - MASTER_SERVICE_URL=http://master-service:8081
     ports:
       - "8080:8080"
+    depends_on:
+      - db
+      - master-service
+
+  master-service:
+    build:
+      context: ./nodequeue-master-service
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8081
+      - MASTER_DB_HOST=db
+      - MASTER_DB_PORT=5432
+      - MASTER_DB_NAME=master_db
+      - MASTER_DB_USER=nodequeue
+      - MASTER_DB_PASSWORD=nodequeue
+      - MASTER_DB_SSLMODE=disable
+      - NODEQUEUE_DB_HOST=db
+      - NODEQUEUE_DB_PORT=5432
+      - NODEQUEUE_DB_NAME=nodequeue
+      - NODEQUEUE_DB_USER=nodequeue
+      - NODEQUEUE_DB_PASSWORD=nodequeue
+      - NODEQUEUE_DB_SSLMODE=disable
+    ports:
+      - "8081:8081"
     depends_on:
       - db
 
@@ -41,15 +66,18 @@ services:
         - NEXT_PUBLIC_API_BASE_URL=/api
         # Used at build-time by next.config.ts to proxy `/api/*` to the backend service.
         - API_PROXY_TARGET=http://api:8080
+        - MASTER_API_PROXY_TARGET=http://master-service:8081
     environment:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       # Kept for clarity/override at runtime; build arg above ensures it is available during `next build`.
       - API_PROXY_TARGET=http://api:8080
+      - MASTER_API_PROXY_TARGET=http://master-service:8081
     ports:
       - "3000:3000"
     depends_on:
       - api
+      - master-service
 
 volumes:
   nodequeue_db_data:

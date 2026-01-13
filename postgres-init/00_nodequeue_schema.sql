@@ -1,7 +1,6 @@
 -- Schema for NodeQueue persistence/audit layer.
--- This file runs once when the Postgres data volume is first initialized.
+-- Copied from nodequeue-service/db/init/00_schema.sql so we can mount a single init directory.
 
--- For UUID helpers (optional but handy for manual inserts).
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS queue_service (
@@ -18,7 +17,9 @@ CREATE TABLE IF NOT EXISTS entities (
 
 CREATE TABLE IF NOT EXISTS resources (
   id         text PRIMARY KEY,
+  name       text NOT NULL,
   capacity   integer NOT NULL CHECK (capacity >= 0),
+  deleted_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -42,5 +43,4 @@ CREATE TABLE IF NOT EXISTS node_logs (
 
 CREATE INDEX IF NOT EXISTS idx_nodes_resource_id ON nodes(resource_id);
 CREATE INDEX IF NOT EXISTS idx_node_logs_node_ts ON node_logs(node_id, ts);
-
 

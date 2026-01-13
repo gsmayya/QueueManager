@@ -61,7 +61,7 @@ func (s *stubReadLogsStore) ListNodeLogs(ctx context.Context, nodeIDs []string) 
 	}
 	return out, nil
 }
-func (s *stubReadLogsStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName string, createdAt time.Time) error {
+func (s *stubReadLogsStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error {
 	return nil
 }
 func (s *stubReadLogsStore) UpdateNodeResource(ctx context.Context, nodeID string, resourceID *string) error {

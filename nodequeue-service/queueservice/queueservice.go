@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -73,9 +74,10 @@ func (qs *QueueService) CreateNode(entityName string) (*node.Node, error) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 
+	entityID := uuid.New().String()
 	node := &node.Node{
 		ID:        uuid.New().String(),
-		Entity:    &node.Entity{Name: entityName},
+		Entity:    &node.Entity{ID: entityID, Name: entityName},
 		Completed: false,
 		CreatedAt: time.Now(),
 	}
@@ -85,16 +87,45 @@ func (qs *QueueService) CreateNode(entityName string) (*node.Node, error) {
 
 	// Persist audit trail (best-effort).
 	ctx := context.Background()
-	entityID := uuid.New().String()
 	createdAt := node.CreatedAt
 	qs.bestEffortPersist(ctx, "PersistNodeCreated", func(ctx context.Context) error {
-		return qs.store.PersistNodeCreated(ctx, node.ID, entityID, entityName, createdAt)
+		return qs.store.PersistNodeCreated(ctx, node.ID, entityID, entityName, node.NodeName, createdAt)
 	})
 	qs.bestEffortPersist(ctx, "InsertNodeLog(created)", func(ctx context.Context) error {
 		return qs.store.InsertNodeLog(ctx, node.ID, "created", nil, createdAt)
 	})
 
 	return node, nil
+}
+
+// CreateNodeForEntity creates a node bound to a master-service entity (customer).
+// entityID should be the UUID from master_db.
+// nodeName is a 4-digit identifier shown in the UI.
+func (qs *QueueService) CreateNodeForEntity(entityID, entityName, nodeName string) (*node.Node, error) {
+	qs.mu.Lock()
+	defer qs.mu.Unlock()
+
+	n := &node.Node{
+		ID:        uuid.New().String(),
+		Entity:    &node.Entity{ID: entityID, Name: entityName},
+		NodeName:  nodeName,
+		Completed: false,
+		CreatedAt: time.Now(),
+	}
+	n.AddLog("created", "")
+	qs.nodes[n.ID] = n
+
+	// Persist audit trail (best-effort) using the master entity ID for nodequeue's entities table too.
+	ctx := context.Background()
+	createdAt := n.CreatedAt
+	qs.bestEffortPersist(ctx, "PersistNodeCreated", func(ctx context.Context) error {
+		return qs.store.PersistNodeCreated(ctx, n.ID, entityID, entityName, nodeName, createdAt)
+	})
+	qs.bestEffortPersist(ctx, "InsertNodeLog(created)", func(ctx context.Context) error {
+		return qs.store.InsertNodeLog(ctx, n.ID, "created", nil, createdAt)
+	})
+
+	return n, nil
 }
 
 // MoveNode assigns a node to a target resource.
@@ -331,7 +362,8 @@ func (qs *QueueService) RestoreFromStore(ctx context.Context) error {
 	for _, pn := range persisted {
 		n := &node.Node{
 			ID:        pn.NodeID,
-			Entity:    &node.Entity{Name: pn.EntityName},
+			Entity:    &node.Entity{ID: pn.EntityID, Name: pn.EntityName},
+			NodeName:  pn.NodeName,
 			Completed: pn.Completed,
 			CreatedAt: pn.CreatedAt,
 		}
@@ -408,15 +440,49 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if req.EntityName == "" {
-		log.Printf("[API] POST /nodes - ERROR: entity_name is required")
-		utils.RespondWithError(w, http.StatusBadRequest, "entity_name is required")
-		return
+	req.EntityName = strings.TrimSpace(req.EntityName)
+	req.EntityID = strings.TrimSpace(req.EntityID)
+	req.NodeName = strings.TrimSpace(req.NodeName)
+
+	var created *node.Node
+	var err error
+
+	// New flow: entity_id + node_name (4 digits).
+	if req.EntityID != "" {
+		if req.NodeName == "" {
+			log.Printf("[API] POST /nodes - ERROR: node_name is required when entity_id is provided")
+			utils.RespondWithError(w, http.StatusBadRequest, "node_name is required when entity_id is provided")
+			return
+		}
+		if len(req.NodeName) != 4 {
+			utils.RespondWithError(w, http.StatusBadRequest, "node_name must be 4 digits")
+			return
+		}
+		for i := 0; i < 4; i++ {
+			if req.NodeName[i] < '0' || req.NodeName[i] > '9' {
+				utils.RespondWithError(w, http.StatusBadRequest, "node_name must be 4 digits")
+				return
+			}
+		}
+		ent, ferr := fetchMasterEntityByID(r.Context(), req.EntityID)
+		if ferr != nil {
+			log.Printf("[API] POST /nodes - ERROR: invalid entity_id (master-service): %v", ferr)
+			utils.RespondWithError(w, http.StatusBadRequest, "invalid entity_id")
+			return
+		}
+
+		log.Printf("[API] POST /nodes - Request: entity_id=%s, node_name=%s, resource_id=%s", req.EntityID, req.NodeName, req.ResourceID)
+		created, err = qs.CreateNodeForEntity(req.EntityID, ent.Name, req.NodeName)
+	} else {
+		// Legacy flow: entity_name required.
+		if req.EntityName == "" {
+			log.Printf("[API] POST /nodes - ERROR: entity_name is required")
+			utils.RespondWithError(w, http.StatusBadRequest, "entity_name is required")
+			return
+		}
+		log.Printf("[API] POST /nodes - Request: entity_name=%s, resource_id=%s", req.EntityName, req.ResourceID)
+		created, err = qs.CreateNode(req.EntityName)
 	}
-
-	log.Printf("[API] POST /nodes - Request: entity_name=%s, resource_id=%s", req.EntityName, req.ResourceID)
-
-	node, err := qs.CreateNode(req.EntityName)
 	if err != nil {
 		log.Printf("[API] POST /nodes - ERROR: %v", err)
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
@@ -425,20 +491,20 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 
 	// If resource_id is provided, add node to that resource
 	if req.ResourceID != "" {
-		log.Printf("[API] POST /nodes - Moving node %s to resource %s", node.ID, req.ResourceID)
-		if err := qs.MoveNode(node.ID, req.ResourceID); err != nil {
+		log.Printf("[API] POST /nodes - Moving node %s to resource %s", created.ID, req.ResourceID)
+		if err := qs.MoveNode(created.ID, req.ResourceID); err != nil {
 			log.Printf("[API] POST /nodes - ERROR moving node: %v", err)
 			// If move fails, still return the created node
-			utils.RespondWithJSON(w, http.StatusCreated, node)
+			utils.RespondWithJSON(w, http.StatusCreated, created)
 			return
 		}
 		// Refresh node to get updated state
-		node, _ = qs.GetNode(node.ID)
+		created, _ = qs.GetNode(created.ID)
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("[API] POST /nodes - SUCCESS: Created node %s (took %v)", node.ID, duration)
-	utils.RespondWithJSON(w, http.StatusCreated, node)
+	log.Printf("[API] POST /nodes - SUCCESS: Created node %s (took %v)", created.ID, duration)
+	utils.RespondWithJSON(w, http.StatusCreated, created)
 }
 
 // MoveNodeHandler handles POST /nodes/{id}/move.
