@@ -9,6 +9,7 @@ import (
 
 	"nodequeue-service/db"
 	"nodequeue-service/queueservice"
+	storepkg "nodequeue-service/store"
 )
 
 // main is the program entry point. It initializes resources, registers routes,
@@ -23,9 +24,9 @@ func main() {
 		defer dbConn.Close()
 	}
 
-	var store db.Store
+	var store storepkg.Store
 	if dbConn != nil {
-		store = db.NewPostgresStore(dbConn)
+		store = storepkg.NewPostgresStore(dbConn)
 	}
 
 	// Initialize queue service

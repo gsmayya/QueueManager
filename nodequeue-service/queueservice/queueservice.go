@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"nodequeue-service/db"
 	"nodequeue-service/node"
 	"nodequeue-service/resource"
-	"nodequeue-service/utils"
+	"nodequeue-service/store"
+	"queue-common/utils"
 
 	"github.com/google/uuid"
 )
@@ -31,7 +31,7 @@ import (
 type QueueService struct {
 	resources    map[string]*resource.Resource
 	nodes        map[string]*node.Node
-	store        db.Store
+	store        store.Store
 	sessionStart time.Time
 	mu           sync.RWMutex
 }
@@ -43,7 +43,7 @@ func NewQueueService() *QueueService {
 
 // NewQueueServiceWithStore constructs a QueueService with an optional persistence store.
 // The store is used on a best-effort basis to avoid changing API behavior if the DB is down.
-func NewQueueServiceWithStore(store db.Store) *QueueService {
+func NewQueueServiceWithStore(store store.Store) *QueueService {
 	return &QueueService{
 		resources:    make(map[string]*resource.Resource),
 		nodes:        make(map[string]*node.Node),
@@ -382,14 +382,14 @@ func (qs *QueueService) RestoreFromStore(ctx context.Context) error {
 
 		st, ok := states[n.ID]
 		queueTS := pn.CreatedAt
-		queueKind := db.QueueKindWaiting
+		queueKind := store.QueueKindWaiting
 		if ok {
 			queueTS = st.TS
 			queueKind = st.Queue
 		}
 
 		switch queueKind {
-		case db.QueueKindService:
+		case store.QueueKindService:
 			serviceByRes[n.ResourceID] = append(serviceByRes[n.ResourceID], queued{n: n, ts: queueTS})
 		default:
 			waitingByRes[n.ResourceID] = append(waitingByRes[n.ResourceID], queued{n: n, ts: queueTS})

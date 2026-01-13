@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"nodequeue-service/db"
 	queueservicepkg "nodequeue-service/queueservice"
 	resourcepkg "nodequeue-service/resource"
+	storepkg "nodequeue-service/store"
 )
 
 func TestNodesMetricsHandler_CompletesAndComputesWaitingSegments(t *testing.T) {
@@ -211,7 +211,7 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 	rid := "resource-1"
 
 	store := &stubReadLogsStore{
-		logsByNode: map[string][]db.NodeLogRow{},
+		logsByNode: map[string][]storepkg.NodeLogRow{},
 	}
 
 	qs := queueservicepkg.NewQueueServiceWithStore(store)
@@ -227,7 +227,7 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 	n.Log = nil
 
 	// Provide DB logs for this node ID; handler should prefer these over in-memory logs.
-	store.logsByNode[nid] = []db.NodeLogRow{
+	store.logsByNode[nid] = []storepkg.NodeLogRow{
 		{NodeID: nid, Action: "moved_to_waiting_queue", ResourceID: &rid, TS: base.Add(1 * time.Second)},
 		{NodeID: nid, Action: "moved_to_service_queue", ResourceID: &rid, TS: base.Add(3 * time.Second)},
 		{NodeID: nid, Action: "completed", ResourceID: &rid, TS: base.Add(10 * time.Second)},

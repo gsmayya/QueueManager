@@ -4,8 +4,8 @@ import (
 	"sort"
 	"time"
 
-	"nodequeue-service/db"
 	"nodequeue-service/node"
+	"nodequeue-service/store"
 )
 
 // WaitingSegment represents time spent waiting in a given resource.
@@ -59,7 +59,7 @@ func toNodeEventsFromInMemory(logs []node.NodeLog) []nodeEvent {
 	return out
 }
 
-func toNodeEventsFromDB(rows []db.NodeLogRow) []nodeEvent {
+func toNodeEventsFromDB(rows []store.NodeLogRow) []nodeEvent {
 	out := make([]nodeEvent, 0, len(rows))
 	for _, r := range rows {
 		rid := ""

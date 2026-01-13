@@ -18,8 +18,8 @@ services:
 
   api:
     build:
-      context: ./nodequeue-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: nodequeue-service/Dockerfile
     environment:
       - PORT=8080
       - DB_HOST=db

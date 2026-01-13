@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"nodequeue-service/db"
 	queueservicepkg "nodequeue-service/queueservice"
 	resourcepkg "nodequeue-service/resource"
+	storepkg "nodequeue-service/store"
 )
 
 func TestResourcesMetricsHandler_MethodNotAllowed(t *testing.T) {
@@ -137,7 +137,7 @@ func TestResourcesMetricsHandler_PrefersDBLogsWhenAvailable(t *testing.T) {
 	// when a Store is configured (durable across restarts).
 	base := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	store := &stubReadLogsStore{logsByNode: map[string][]db.NodeLogRow{}}
+	store := &stubReadLogsStore{logsByNode: map[string][]storepkg.NodeLogRow{}}
 	qs := queueservicepkg.NewQueueServiceWithStore(store)
 	r1 := resourcepkg.NewResource("resource-1", 5)
 	qs.AddResource(r1)
@@ -150,7 +150,7 @@ func TestResourcesMetricsHandler_PrefersDBLogsWhenAvailable(t *testing.T) {
 	}
 
 	rid := r1.ID
-	store.logsByNode[n.ID] = []db.NodeLogRow{
+	store.logsByNode[n.ID] = []storepkg.NodeLogRow{
 		{NodeID: n.ID, Action: "created", ResourceID: nil, TS: base.Add(1 * time.Second)},
 		{NodeID: n.ID, Action: "moved_to_waiting_queue", ResourceID: &rid, TS: base.Add(2 * time.Second)},
 		{NodeID: n.ID, Action: "moved_to_service_queue", ResourceID: &rid, TS: base.Add(3 * time.Second)},

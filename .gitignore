@@ -77,3 +77,4 @@ out/
 .gocache
 
 nodequeue-master-service/nodequeue-master-service 
+nodequeue-service/nodequeue-service
