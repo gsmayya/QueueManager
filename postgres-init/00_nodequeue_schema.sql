@@ -1,5 +1,5 @@
 -- Schema for NodeQueue persistence/audit layer.
--- Copied from nodequeue-service/db/init/00_schema.sql so we can mount a single init directory.
+-- Copied from queue-service/db/init/00_schema.sql so we can mount a single init directory.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

@@ -1,5 +1,5 @@
 -- Schema for master_db.
--- Copied from nodequeue-master-service/db/init/01_schema.sql so we can mount a single init directory.
+-- Copied from queue-admin/db/init/01_schema.sql so we can mount a single init directory.
 
 \connect master_db;
 

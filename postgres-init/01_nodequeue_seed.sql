@@ -1,5 +1,5 @@
 -- Seed initial data (idempotent).
--- Copied from nodequeue-service/db/init/01_seed.sql so we can mount a single init directory.
+-- Copied from queue-service/db/init/01_seed.sql so we can mount a single init directory.
 
 INSERT INTO queue_service (id, notes)
 VALUES (1, 'NodeQueueService singleton metadata row')

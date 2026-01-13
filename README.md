@@ -93,21 +93,21 @@ docker compose -f docker-compose.dev.yml up --build
 
 1. **Start the backend service**:
    ```bash
-   cd nodequeue-service
+   cd queue-service
    go run .
    ```
    The service will start on `http://localhost:8080`
 
 2. **Start the master service (Admin DB / Entities / Users / Rooms)**:
    ```bash
-   cd nodequeue-master-service
+   cd queue-admin
    go run .
    ```
    The service will start on `http://localhost:8081`
 
 3. **Use the Next.js UI (recommended)**:
    ```bash
-   cd nodequeue-frontend
+   cd queue-ui
    # Create a local env file based on env.example:
    cp env.example .env.local
    npm install

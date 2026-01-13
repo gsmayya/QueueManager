@@ -11,9 +11,9 @@ services:
       - nodequeue_db_data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
 
-  api:
+  queue-service:
     image: golang:1.24-alpine
-    working_dir: /app/nodequeue-service
+    working_dir: /app/queue-service
     environment:
       - PORT=8080
       - CGO_ENABLED=0
@@ -22,21 +22,21 @@ services:
       - DB_NAME=nodequeue
       - DB_USER=nodequeue
       - DB_PASSWORD=nodequeue
-      - MASTER_SERVICE_URL=http://master-service:8081
+      - MASTER_SERVICE_URL=http://queue-admin:8081
     volumes:
-      - ./nodequeue-service:/app/nodequeue-service
+      - ./queue-service:/app/queue-service
       - ./queue-common:/app/queue-common
       - go_mod_cache:/go/pkg/mod
     ports:
       - "8080:8080"
     depends_on:
       - db
-      - master-service
+      - queue-admin
     command: sh -c "go mod download && go run ."
 
-  master-service:
+  queue-admin:
     image: golang:1.24-alpine
-    working_dir: /app/nodequeue-master-service
+    working_dir: /app/queue-admin
     environment:
       - PORT=8081
       - CGO_ENABLED=0
@@ -53,8 +53,8 @@ services:
       - NODEQUEUE_DB_PASSWORD=nodequeue
       - NODEQUEUE_DB_SSLMODE=disable
     volumes:
-      - ./nodequeue-master-service:/app/nodequeue-master-service
-      - ./queue-common:/app/queue-common        
+      - ./queue-admin:/app/queue-admin
+      - ./queue-common:/app/queue-common
       - go_mod_cache:/go/pkg/mod
     ports:
       - "8081:8081"
@@ -62,23 +62,23 @@ services:
       - db
     command: sh -c "go mod download && go run ."
 
-  web:
+  queue-ui:
     image: node:20-alpine
     working_dir: /app
     environment:
       - NEXT_PUBLIC_API_BASE_URL=/api
-      - API_PROXY_TARGET=http://api:8080
-      - MASTER_API_PROXY_TARGET=http://master-service:8081
+      - API_PROXY_TARGET=http://queue-service:8080
+      - MASTER_API_PROXY_TARGET=http://queue-admin:8081
       - HOSTNAME=0.0.0.0
       - PORT=3000
     volumes:
-      - ./nodequeue-frontend:/app
+      - ./queue-ui:/app
       - web_node_modules:/app/node_modules
     ports:
       - "3000:3000"
     depends_on:
-      - api
-      - master-service
+      - queue-service
+      - queue-admin
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
 
 volumes:
