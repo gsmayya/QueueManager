@@ -5,23 +5,32 @@ Queue Manager is a system for managing and simulating resource queues. It consis
 ```mermaid
 graph TD;
     UI[Web UI]
-    API[Go-based Backend API]
-    MasterAPI[Master API]
-    DB[(Database)]
+    QM[QueueManager Go based API]    
+    Admin[Admin Go based API]
+    QDB[QueueDB database]
+    MDB[MasterDB database]
     AdminPanel[Admin Panel]
+    NodePanel[Node Panel]
+    MetricsPanel[Metrics Panel]
+    QMPanel[QueueManager Panel]
     User[End User]
 
     User --> UI
-    UI -->|REST/HTTP| API
-    UI -->|REST/HTTP| MasterAPI
-    UI --> AdminPanel
-    AdminPanel -->|Admin Actions| API
+    UI --> AdminPanel  
+    UI --> NodePanel  
+    UI --> MetricsPanel
+    UI --> QMPanel
+  
+    QMPanel -->|Queue Management| QM
+    MetricsPanel -->|Metrics| QM
+    NodePanel -->|Node Management| Admin
+    AdminPanel -->|Admin Actions| Admin    
 
-    API -->|CRUD & Queue Ops| DB
-    MasterAPI -->|Management Ops| DB
-    API -.->|Status Updates| UI
-    MasterAPI -.->|Stats Updates| UI
+    QM -->|Queue Ops & Node Logs| QDB    
+    Admin --> |Management Ops| MDB
+    QM --> |Entity, Room information| MDB   
 ```
+
 **Architecture diagram:**  
 - The end user interacts with the Web UI and Admin Panel.
 - The Web UI communicates with both the main API (resource management) and Master API (advanced operations).
