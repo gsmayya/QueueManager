@@ -1,4 +1,4 @@
-package handlers
+package tests
 
 import (
 	"bytes"
@@ -11,6 +11,8 @@ import (
 
 	"nodequeue-master-service/models"
 	"nodequeue-master-service/store"
+
+	. "nodequeue-master-service/handlers"
 
 	"golang.org/x/crypto/bcrypt"
 )

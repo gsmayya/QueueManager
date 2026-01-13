@@ -5,14 +5,14 @@ import (
 	"strings"
 
 	"nodequeue-master-service/models"
-	"nodequeue-master-service/utils"
+	"queue-common/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateUserRequest
-	if !decodeJSON(w, r, &req) {
+	if !utils.DecodeJSON(w, r, &req) {
 		return
 	}
 	req.UserID = strings.TrimSpace(req.UserID)
@@ -50,7 +50,7 @@ func (s *Service) ListUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) GetUser(w http.ResponseWriter, r *http.Request, id string) {
-	if !parseUUIDParam(w, id) {
+	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
 	out, err := s.store.GetUser(r.Context(), id)
@@ -65,11 +65,11 @@ func (s *Service) GetUser(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func (s *Service) UpdateUser(w http.ResponseWriter, r *http.Request, id string) {
-	if !parseUUIDParam(w, id) {
+	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
 	var req models.UpdateUserRequest
-	if !decodeJSON(w, r, &req) {
+	if !utils.DecodeJSON(w, r, &req) {
 		return
 	}
 
@@ -125,7 +125,7 @@ func (s *Service) UpdateUser(w http.ResponseWriter, r *http.Request, id string) 
 }
 
 func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request, id string) {
-	if !parseUUIDParam(w, id) {
+	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
 	if err := s.store.DeleteUser(r.Context(), id); err != nil {

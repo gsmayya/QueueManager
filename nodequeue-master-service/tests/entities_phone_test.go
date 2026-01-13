@@ -1,4 +1,4 @@
-package handlers
+package tests
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	. "nodequeue-master-service/handlers"
 	"nodequeue-master-service/models"
 )
 

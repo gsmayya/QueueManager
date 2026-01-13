@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"nodequeue-master-service/models"
-	"nodequeue-master-service/utils"
+	"queue-common/utils"
 )
 
 func (s *Service) CreateEntity(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateEntityRequest
-	if !decodeJSON(w, r, &req) {
+	if !utils.DecodeJSON(w, r, &req) {
 		return
 	}
 	req.Name = strings.TrimSpace(req.Name)
@@ -50,7 +50,7 @@ func (s *Service) ListEntities(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) GetEntity(w http.ResponseWriter, r *http.Request, id string) {
-	if !parseUUIDParam(w, id) {
+	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
 	out, err := s.store.GetEntity(r.Context(), id)
@@ -65,11 +65,11 @@ func (s *Service) GetEntity(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func (s *Service) UpdateEntity(w http.ResponseWriter, r *http.Request, id string) {
-	if !parseUUIDParam(w, id) {
+	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
 	var req models.UpdateEntityRequest
-	if !decodeJSON(w, r, &req) {
+	if !utils.DecodeJSON(w, r, &req) {
 		return
 	}
 	// If provided, enforce non-empty for required fields.
@@ -102,7 +102,7 @@ func (s *Service) UpdateEntity(w http.ResponseWriter, r *http.Request, id string
 }
 
 func (s *Service) DeleteEntity(w http.ResponseWriter, r *http.Request, id string) {
-	if !parseUUIDParam(w, id) {
+	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
 	if err := s.store.DeleteEntity(r.Context(), id); err != nil {

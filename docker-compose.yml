@@ -36,8 +36,8 @@ services:
 
   master-service:
     build:
-      context: ./nodequeue-master-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: nodequeue-master-service/Dockerfile
     environment:
       - PORT=8081
       - MASTER_DB_HOST=db

@@ -1,16 +1,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"time"
 
-	"nodequeue-master-service/db"
 	"nodequeue-master-service/handlers"
 	"nodequeue-master-service/store"
+	"queue-common/db"
 )
 
 func main() {
@@ -31,12 +29,6 @@ func main() {
 		log.Fatal("[DB] missing NODEQUEUE_DB_* env vars (or MASTER_DB_* fallback) for rooms APIs")
 	}
 	defer nodequeueConn.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	if err := db.EnsureMasterSchema(ctx, dbConn); err != nil {
-		log.Fatalf("[DB] failed to ensure master_db schema: %v", err)
-	}
 
 	st := store.NewPostgresStore(dbConn)
 	roomStore := store.NewNodequeuePostgresStore(nodequeueConn)

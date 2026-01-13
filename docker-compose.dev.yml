@@ -12,7 +12,7 @@ services:
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
 
   api:
-    image: golang:1.23-alpine
+    image: golang:1.24-alpine
     working_dir: /app/nodequeue-service
     environment:
       - PORT=8080
@@ -35,8 +35,8 @@ services:
     command: sh -c "go mod download && go run ."
 
   master-service:
-    image: golang:1.23-alpine
-    working_dir: /app
+    image: golang:1.24-alpine
+    working_dir: /app/nodequeue-master-service
     environment:
       - PORT=8081
       - CGO_ENABLED=0
@@ -53,7 +53,8 @@ services:
       - NODEQUEUE_DB_PASSWORD=nodequeue
       - NODEQUEUE_DB_SSLMODE=disable
     volumes:
-      - ./nodequeue-master-service:/app
+      - ./nodequeue-master-service:/app/nodequeue-master-service
+      - ./queue-common:/app/queue-common        
       - go_mod_cache:/go/pkg/mod
     ports:
       - "8081:8081"

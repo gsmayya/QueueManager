@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Build from repo root context so we can include `queue-common` (used via go.mod replace).
 WORKDIR /src

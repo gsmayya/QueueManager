@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	"nodequeue-service/db"
 	"nodequeue-service/queueservice"
 	storepkg "nodequeue-service/store"
+	"queue-common/db"
 )
 
 // main is the program entry point. It initializes resources, registers routes,

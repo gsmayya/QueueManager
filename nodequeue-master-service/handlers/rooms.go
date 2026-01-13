@@ -6,14 +6,14 @@ import (
 	"strings"
 
 	"nodequeue-master-service/models"
-	"nodequeue-master-service/utils"
+	"queue-common/utils"
 
 	"github.com/google/uuid"
 )
 
 func (s *Service) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateRoomRequest
-	if !decodeJSON(w, r, &req) {
+	if !utils.DecodeJSON(w, r, &req) {
 		return
 	}
 	req.Name = strings.TrimSpace(req.Name)
@@ -82,7 +82,7 @@ func (s *Service) UpdateRoom(w http.ResponseWriter, r *http.Request, id string) 
 		return
 	}
 	var req models.UpdateRoomRequest
-	if !decodeJSON(w, r, &req) {
+	if !utils.DecodeJSON(w, r, &req) {
 		return
 	}
 	if req.Name != nil {
