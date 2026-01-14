@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"queue-admin/models"
 	"queue-admin/store"
+	"queue-common/models"
 
 	. "queue-admin/handlers"
 

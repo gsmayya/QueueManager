@@ -4,10 +4,11 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"queue-common/models"
 	"strings"
 
 	"queue-service/queueservice"
-	"queue-service/resource"
+
 	"queue-service/store"
 )
 
@@ -85,7 +86,7 @@ func setupRoutes(qs *queueservice.QueueService) {
 	http.HandleFunc("/resources", corsMiddleware(qs.ListResourcesHandler))
 }
 
-func setupResources(fileName string, queueService *queueservice.QueueService, store store.Store) []*resource.Resource {
+func setupResources(fileName string, queueService *queueservice.QueueService, store store.Store) []*models.Resource {
 	// Prefer DB resources when available, but fall back to local defaults if DB isn't configured/reachable.
 	if store != nil {
 		if dbResources, err := store.ListResources(context.Background()); err == nil && len(dbResources) > 0 {
@@ -99,7 +100,7 @@ func setupResources(fileName string, queueService *queueservice.QueueService, st
 		}
 	}
 
-	resources := resource.LoadResources(fileName)
+	resources := models.LoadResources(fileName)
 	for _, r := range resources {
 		queueService.AddResource(r)
 		log.Printf("Initialized resource %s with capacity %d", r.ID, r.Capacity)

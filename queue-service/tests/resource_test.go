@@ -3,12 +3,11 @@ package tests
 import (
 	"testing"
 
-	"queue-service/node"
-	"queue-service/resource"
+	"queue-common/models"
 )
 
 func TestNewResource(t *testing.T) {
-	resource := resource.NewResource("test-resource", 5)
+	resource := models.NewResource("test-resource", 5)
 
 	if resource.ID != "test-resource" {
 		t.Errorf("Expected ID 'test-resource', got '%s'", resource.ID)
@@ -28,10 +27,10 @@ func TestNewResource(t *testing.T) {
 }
 
 func TestResource_AddNode(t *testing.T) {
-	resource := resource.NewResource("test-resource", 2)
-	node1 := &node.Node{ID: "node-1", Entity: &node.Entity{Name: "entity-1"}}
-	node2 := &node.Node{ID: "node-2", Entity: &node.Entity{Name: "entity-2"}}
-	node3 := &node.Node{ID: "node-3", Entity: &node.Entity{Name: "entity-3"}}
+	resource := models.NewResource("test-resource", 2)
+	node1 := &models.Node{ID: "node-1", Entity: &models.Entity{Name: "entity-1"}}
+	node2 := &models.Node{ID: "node-2", Entity: &models.Entity{Name: "entity-2"}}
+	node3 := &models.Node{ID: "node-3", Entity: &models.Entity{Name: "entity-3"}}
 
 	// Add first node - should go to waiting queue
 	if !resource.AddNode(node1) {
@@ -67,9 +66,9 @@ func TestResource_AddNode(t *testing.T) {
 }
 
 func TestResource_RemoveNode(t *testing.T) {
-	resource := resource.NewResource("test-resource", 5)
-	node1 := &node.Node{ID: "node-1", Entity: &node.Entity{Name: "entity-1"}}
-	node2 := &node.Node{ID: "node-2", Entity: &node.Entity{Name: "entity-2"}}
+	resource := models.NewResource("test-resource", 5)
+	node1 := &models.Node{ID: "node-1", Entity: &models.Entity{Name: "entity-1"}}
+	node2 := &models.Node{ID: "node-2", Entity: &models.Entity{Name: "entity-2"}}
 
 	resource.AddNode(node1)
 	resource.AddNode(node2)
@@ -95,9 +94,9 @@ func TestResource_RemoveNode(t *testing.T) {
 }
 
 func TestResource_GetNode(t *testing.T) {
-	resource := resource.NewResource("test-resource", 5)
-	node1 := &node.Node{ID: "node-1", Entity: &node.Entity{Name: "entity-1"}}
-	node2 := &node.Node{ID: "node-2", Entity: &node.Entity{Name: "entity-2"}}
+	resource := models.NewResource("test-resource", 5)
+	node1 := &models.Node{ID: "node-1", Entity: &models.Entity{Name: "entity-1"}}
+	node2 := &models.Node{ID: "node-2", Entity: &models.Entity{Name: "entity-2"}}
 
 	resource.AddNode(node1)
 	resource.AddNode(node2)
@@ -119,13 +118,13 @@ func TestResource_GetNode(t *testing.T) {
 }
 
 func TestResource_GetAvailableCapacity(t *testing.T) {
-	resource := resource.NewResource("test-resource", 5)
+	resource := models.NewResource("test-resource", 5)
 
 	if resource.GetAvailableCapacity() != 5 {
 		t.Errorf("Expected available capacity 5, got %d", resource.GetAvailableCapacity())
 	}
 
-	node1 := &node.Node{ID: "node-1", Entity: &node.Entity{Name: "entity-1"}}
+	node1 := &models.Node{ID: "node-1", Entity: &models.Entity{Name: "entity-1"}}
 	resource.AddNode(node1)
 
 	// Adding to waiting queue does not consume capacity
@@ -143,14 +142,14 @@ func TestResource_GetAvailableCapacity(t *testing.T) {
 }
 
 func TestResource_IsFull(t *testing.T) {
-	resource := resource.NewResource("test-resource", 2)
+	resource := models.NewResource("test-resource", 2)
 
 	if resource.IsFull() {
 		t.Error("Resource should not be full initially")
 	}
 
-	node1 := &node.Node{ID: "node-1", Entity: &node.Entity{Name: "entity-1"}}
-	node2 := &node.Node{ID: "node-2", Entity: &node.Entity{Name: "entity-2"}}
+	node1 := &models.Node{ID: "node-1", Entity: &models.Entity{Name: "entity-1"}}
+	node2 := &models.Node{ID: "node-2", Entity: &models.Entity{Name: "entity-2"}}
 
 	resource.AddNode(node1)
 	if resource.IsFull() {

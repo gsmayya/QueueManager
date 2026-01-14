@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"queue-admin/models"
+	"queue-common/models"
 )
 
 var (

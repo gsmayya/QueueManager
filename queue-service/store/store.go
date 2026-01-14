@@ -2,9 +2,8 @@ package store
 
 import (
 	"context"
+	"queue-common/models"
 	"time"
-
-	"queue-service/resource"
 )
 
 type PersistedNode struct {
@@ -41,7 +40,7 @@ type NodeLogRow struct {
 // Store is an optional persistence/audit sink for QueueService.
 // Implementations should be safe for best-effort writes (callers may ignore errors to keep API behavior stable).
 type Store interface {
-	ListResources(ctx context.Context) ([]*resource.Resource, error)
+	ListResources(ctx context.Context) ([]*models.Resource, error)
 	ListNodes(ctx context.Context) ([]PersistedNode, error)
 	ListLatestNodeStates(ctx context.Context) (map[string]NodeState, error)
 	ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]NodeLogRow, error)

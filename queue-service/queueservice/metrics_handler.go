@@ -6,8 +6,8 @@ import (
 	"slices"
 	"time"
 
+	"queue-common/models"
 	"queue-common/utils"
-	"queue-service/node"
 	"queue-service/store"
 )
 
@@ -26,7 +26,7 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 	qs.mu.RLock()
 	nodeIDs := make([]string, 0, len(qs.nodes))
 	snaps := make(map[string]nodeSnapshot, len(qs.nodes))
-	memLogs := make(map[string][]node.NodeLog, len(qs.nodes))
+	memLogs := make(map[string][]models.NodeLog, len(qs.nodes))
 	for id, n := range qs.nodes {
 		entityName := ""
 		if n.Entity != nil {
@@ -41,7 +41,7 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 		nodeIDs = append(nodeIDs, id)
 
 		if len(n.Log) > 0 {
-			cp := make([]node.NodeLog, len(n.Log))
+			cp := make([]models.NodeLog, len(n.Log))
 			copy(cp, n.Log)
 			memLogs[id] = cp
 		} else {

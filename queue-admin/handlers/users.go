@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"queue-admin/models"
+	"queue-common/models"
 	"queue-common/utils"
 
 	"golang.org/x/crypto/bcrypt"

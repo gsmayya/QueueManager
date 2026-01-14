@@ -11,9 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"queue-common/models"
 	"queue-common/utils"
-	"queue-service/node"
-	"queue-service/resource"
 	"queue-service/store"
 
 	"github.com/google/uuid"
@@ -29,8 +28,8 @@ import (
 // - Moving/assigning a node to a resource places it into that resource's waiting queue.
 // - Allocation (waiting -> service) is where capacity is enforced.
 type QueueService struct {
-	resources    map[string]*resource.Resource
-	nodes        map[string]*node.Node
+	resources    map[string]*models.Resource
+	nodes        map[string]*models.Node
 	store        store.Store
 	sessionStart time.Time
 	mu           sync.RWMutex
@@ -45,8 +44,8 @@ func NewQueueService() *QueueService {
 // The store is used on a best-effort basis to avoid changing API behavior if the DB is down.
 func NewQueueServiceWithStore(store store.Store) *QueueService {
 	return &QueueService{
-		resources:    make(map[string]*resource.Resource),
-		nodes:        make(map[string]*node.Node),
+		resources:    make(map[string]*models.Resource),
+		nodes:        make(map[string]*models.Node),
 		store:        store,
 		sessionStart: time.Now(),
 	}
@@ -62,7 +61,7 @@ func (qs *QueueService) bestEffortPersist(ctx context.Context, op string, fn fun
 }
 
 // AddResource registers a Resource by ID, replacing any existing entry with the same ID.
-func (qs *QueueService) AddResource(r *resource.Resource) {
+func (qs *QueueService) AddResource(r *models.Resource) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 	qs.resources[r.ID] = r
@@ -70,14 +69,14 @@ func (qs *QueueService) AddResource(r *resource.Resource) {
 
 // CreateNode creates and stores a new node for the provided entity name.
 // The node is created unassigned (ResourceID empty) and includes an initial "created" log entry.
-func (qs *QueueService) CreateNode(entityName string) (*node.Node, error) {
+func (qs *QueueService) CreateNode(entityName string) (*models.Node, error) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 
 	entityID := uuid.New().String()
-	node := &node.Node{
+	node := &models.Node{
 		ID:        uuid.New().String(),
-		Entity:    &node.Entity{ID: entityID, Name: entityName},
+		Entity:    &models.Entity{ID: entityID, Name: entityName},
 		Completed: false,
 		CreatedAt: time.Now(),
 	}
@@ -101,13 +100,13 @@ func (qs *QueueService) CreateNode(entityName string) (*node.Node, error) {
 // CreateNodeForEntity creates a node bound to a master-service entity (customer).
 // entityID should be the UUID from master_db.
 // nodeName is a 4-digit identifier shown in the UI.
-func (qs *QueueService) CreateNodeForEntity(entityID, entityName, nodeName string) (*node.Node, error) {
+func (qs *QueueService) CreateNodeForEntity(entityID, entityName, nodeName string) (*models.Node, error) {
 	qs.mu.Lock()
 	defer qs.mu.Unlock()
 
-	n := &node.Node{
+	n := &models.Node{
 		ID:        uuid.New().String(),
-		Entity:    &node.Entity{ID: entityID, Name: entityName},
+		Entity:    &models.Entity{ID: entityID, Name: entityName},
 		NodeName:  nodeName,
 		Completed: false,
 		CreatedAt: time.Now(),
@@ -269,7 +268,7 @@ func (qs *QueueService) CompleteNode(nodeID string) error {
 }
 
 // GetNode returns a node by ID.
-func (qs *QueueService) GetNode(nodeID string) (*node.Node, error) {
+func (qs *QueueService) GetNode(nodeID string) (*models.Node, error) {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
@@ -282,7 +281,7 @@ func (qs *QueueService) GetNode(nodeID string) (*node.Node, error) {
 }
 
 // GetResource returns a resource by ID.
-func (qs *QueueService) GetResource(resourceID string) (*resource.Resource, error) {
+func (qs *QueueService) GetResource(resourceID string) (*models.Resource, error) {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
@@ -295,11 +294,11 @@ func (qs *QueueService) GetResource(resourceID string) (*resource.Resource, erro
 }
 
 // ListResources returns a snapshot slice of all resources currently registered.
-func (qs *QueueService) ListResources() []*resource.Resource {
+func (qs *QueueService) ListResources() []*models.Resource {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
-	resources := make([]*resource.Resource, 0, len(qs.resources))
+	resources := make([]*models.Resource, 0, len(qs.resources))
 	for _, resource := range qs.resources {
 		resources = append(resources, resource)
 	}
@@ -310,11 +309,11 @@ func (qs *QueueService) ListResources() []*resource.Resource {
 }
 
 // ListNodes returns a snapshot slice of all nodes currently stored.
-func (qs *QueueService) ListNodes() []*node.Node {
+func (qs *QueueService) ListNodes() []*models.Node {
 	qs.mu.RLock()
 	defer qs.mu.RUnlock()
 
-	nodes := make([]*node.Node, 0, len(qs.nodes))
+	nodes := make([]*models.Node, 0, len(qs.nodes))
 	for _, node := range qs.nodes {
 		nodes = append(nodes, node)
 	}
@@ -346,23 +345,23 @@ func (qs *QueueService) RestoreFromStore(ctx context.Context) error {
 	defer qs.mu.Unlock()
 
 	// Clear existing in-memory nodes and resource queues to avoid duplicates.
-	qs.nodes = make(map[string]*node.Node, len(persisted))
+	qs.nodes = make(map[string]*models.Node, len(persisted))
 	for _, r := range qs.resources {
 		r.Nodes = nil
 		r.WaitingQueue = nil
 	}
 
 	type queued struct {
-		n  *node.Node
+		n  *models.Node
 		ts time.Time
 	}
 	waitingByRes := make(map[string][]queued)
 	serviceByRes := make(map[string][]queued)
 
 	for _, pn := range persisted {
-		n := &node.Node{
+		n := &models.Node{
 			ID:        pn.NodeID,
-			Entity:    &node.Entity{ID: pn.EntityID, Name: pn.EntityName},
+			Entity:    &models.Entity{ID: pn.EntityID, Name: pn.EntityName},
 			NodeName:  pn.NodeName,
 			Completed: pn.Completed,
 			CreatedAt: pn.CreatedAt,
@@ -400,7 +399,7 @@ func (qs *QueueService) RestoreFromStore(ctx context.Context) error {
 	for rid, items := range waitingByRes {
 		sort.Slice(items, func(i, j int) bool { return items[i].ts.Before(items[j].ts) })
 		r := qs.resources[rid]
-		r.WaitingQueue = make([]*node.Node, 0, len(items))
+		r.WaitingQueue = make([]*models.Node, 0, len(items))
 		for _, it := range items {
 			r.WaitingQueue = append(r.WaitingQueue, it.n)
 		}
@@ -408,7 +407,7 @@ func (qs *QueueService) RestoreFromStore(ctx context.Context) error {
 	for rid, items := range serviceByRes {
 		sort.Slice(items, func(i, j int) bool { return items[i].ts.Before(items[j].ts) })
 		r := qs.resources[rid]
-		r.Nodes = make([]*node.Node, 0, len(items))
+		r.Nodes = make([]*models.Node, 0, len(items))
 		for _, it := range items {
 			r.Nodes = append(r.Nodes, it.n)
 		}
@@ -433,7 +432,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var req node.CreateNodeRequest
+	var req models.CreateNodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[API] POST /nodes - ERROR: Invalid request body - %v", err)
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
@@ -444,7 +443,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 	req.EntityID = strings.TrimSpace(req.EntityID)
 	req.NodeName = strings.TrimSpace(req.NodeName)
 
-	var created *node.Node
+	var created *models.Node
 	var err error
 
 	// New flow: entity_id + node_name (4 digits).
@@ -515,7 +514,7 @@ func (qs *QueueService) MoveNodeHandler(w http.ResponseWriter, r *http.Request, 
 	startTime := time.Now()
 	log.Printf("[API] POST /nodes/%s/move - Request", nodeID)
 
-	var req node.MoveNodeRequest
+	var req models.MoveNodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[API] POST /nodes/%s/move - ERROR: Invalid request body - %v", nodeID, err)
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")

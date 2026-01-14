@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"queue-admin/models"
+	"queue-common/models"
 	"queue-common/utils"
 
 	"github.com/google/uuid"

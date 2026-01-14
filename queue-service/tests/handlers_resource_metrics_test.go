@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"queue-common/models"
 	"testing"
 	"time"
 
 	queueservicepkg "queue-service/queueservice"
-	resourcepkg "queue-service/resource"
+
 	storepkg "queue-service/store"
 )
 
@@ -24,8 +25,8 @@ func TestResourcesMetricsHandler_MethodNotAllowed(t *testing.T) {
 
 func TestResourcesMetricsHandler_ReportsAllResources_AndCounts(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 1)
-	r2 := resourcepkg.NewResource("resource-2", 1)
+	r1 := models.NewResource("resource-1", 1)
+	r2 := models.NewResource("resource-2", 1)
 	qs.AddResource(r1)
 	qs.AddResource(r2)
 
@@ -99,7 +100,7 @@ func TestResourcesMetricsHandler_ReportsAllResources_AndCounts(t *testing.T) {
 
 func TestResourcesMetricsHandler_CountsRevisits(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 5)
+	r1 := models.NewResource("resource-1", 5)
 	qs.AddResource(r1)
 
 	n, _ := qs.CreateNode("entity-1")
@@ -139,7 +140,7 @@ func TestResourcesMetricsHandler_PrefersDBLogsWhenAvailable(t *testing.T) {
 
 	store := &stubReadLogsStore{logsByNode: map[string][]storepkg.NodeLogRow{}}
 	qs := queueservicepkg.NewQueueServiceWithStore(store)
-	r1 := resourcepkg.NewResource("resource-1", 5)
+	r1 := models.NewResource("resource-1", 5)
 	qs.AddResource(r1)
 
 	// Create a node but do NOT move/allocate it in memory; if handler incorrectly uses in-memory logs,

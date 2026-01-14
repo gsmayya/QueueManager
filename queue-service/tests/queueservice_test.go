@@ -1,10 +1,10 @@
 package tests
 
 import (
+	"queue-common/models"
 	"testing"
 
 	queueservicepkg "queue-service/queueservice"
-	resourcepkg "queue-service/resource"
 )
 
 func TestNewQueueService(t *testing.T) {
@@ -23,7 +23,7 @@ func TestNewQueueService(t *testing.T) {
 
 func TestQueueService_AddResource(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource := resourcepkg.NewResource("test-resource", 5)
+	resource := models.NewResource("test-resource", 5)
 
 	qs.AddResource(resource)
 
@@ -79,8 +79,8 @@ func TestQueueService_CreateNode(t *testing.T) {
 
 func TestQueueService_MoveNode(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 3)
-	resource2 := resourcepkg.NewResource("resource-2", 2)
+	resource1 := models.NewResource("resource-1", 3)
+	resource2 := models.NewResource("resource-2", 2)
 	qs.AddResource(resource1)
 	qs.AddResource(resource2)
 
@@ -121,8 +121,8 @@ func TestQueueService_MoveNode(t *testing.T) {
 
 func TestQueueService_MoveNode_FromServiceQueue_RemovesFromServiceAndEnqueuesWaiting(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 1)
-	r2 := resourcepkg.NewResource("resource-2", 1)
+	r1 := models.NewResource("resource-1", 1)
+	r2 := models.NewResource("resource-2", 1)
 	qs.AddResource(r1)
 	qs.AddResource(r2)
 
@@ -155,7 +155,7 @@ func TestQueueService_MoveNode_FromServiceQueue_RemovesFromServiceAndEnqueuesWai
 
 func TestQueueService_MoveNode_Errors(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 1)
+	resource1 := models.NewResource("resource-1", 1)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -175,7 +175,7 @@ func TestQueueService_MoveNode_Errors(t *testing.T) {
 
 func TestQueueService_AllocateNode(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 1)
+	resource1 := models.NewResource("resource-1", 1)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -206,7 +206,7 @@ func TestQueueService_AllocateNode(t *testing.T) {
 
 func TestQueueService_AllocateNode_Errors(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 1)
+	resource1 := models.NewResource("resource-1", 1)
 	qs.AddResource(resource1)
 
 	// Not assigned
@@ -231,7 +231,7 @@ func TestQueueService_AllocateNode_Errors(t *testing.T) {
 
 func TestQueueService_AllocateNode_AlreadyInService_Errors(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 2)
+	r1 := models.NewResource("resource-1", 2)
 	qs.AddResource(r1)
 
 	n, _ := qs.CreateNode("entity-1")
@@ -246,7 +246,7 @@ func TestQueueService_AllocateNode_AlreadyInService_Errors(t *testing.T) {
 
 func TestQueueService_CompleteNode(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 3)
+	resource1 := models.NewResource("resource-1", 3)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -304,7 +304,7 @@ func TestQueueService_CompleteNode_Errors(t *testing.T) {
 
 func TestQueueService_MoveCompletedNode(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 3)
+	resource1 := models.NewResource("resource-1", 3)
 	qs.AddResource(resource1)
 
 	node, _ := qs.CreateNode("test-entity")
@@ -338,7 +338,7 @@ func TestQueueService_GetNode(t *testing.T) {
 
 func TestQueueService_GetResource(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource := resourcepkg.NewResource("test-resource", 5)
+	resource := models.NewResource("test-resource", 5)
 	qs.AddResource(resource)
 
 	retrievedResource, err := qs.GetResource("test-resource")
@@ -358,8 +358,8 @@ func TestQueueService_GetResource(t *testing.T) {
 
 func TestQueueService_ListResources(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 5)
-	resource2 := resourcepkg.NewResource("resource-2", 3)
+	resource1 := models.NewResource("resource-1", 5)
+	resource2 := models.NewResource("resource-2", 3)
 	qs.AddResource(resource1)
 	qs.AddResource(resource2)
 

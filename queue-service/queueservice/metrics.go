@@ -4,7 +4,7 @@ import (
 	"slices"
 	"time"
 
-	"queue-service/node"
+	"queue-common/models"
 	"queue-service/store"
 )
 
@@ -47,7 +47,7 @@ type nodeSnapshot struct {
 	Completed bool
 }
 
-func toNodeEventsFromInMemory(logs []node.NodeLog) []nodeEvent {
+func toNodeEventsFromInMemory(logs []models.NodeLog) []nodeEvent {
 	out := make([]nodeEvent, 0, len(logs))
 	for _, l := range logs {
 		out = append(out, nodeEvent{

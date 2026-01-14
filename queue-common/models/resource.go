@@ -1,4 +1,4 @@
-package resource
+package models
 
 import (
 	"encoding/csv"
@@ -6,8 +6,6 @@ import (
 	"os"
 	"strconv"
 	"sync"
-
-	"queue-service/node"
 )
 
 // Resource represents a capacity-limited worker pool.
@@ -23,9 +21,9 @@ type Resource struct {
 	Name     string `json:"name"`
 	Capacity int    `json:"capacity"`
 	// Nodes represents the service queue (nodes currently consuming capacity)
-	Nodes []*node.Node `json:"nodes"`
+	Nodes []*Node `json:"nodes"`
 	// WaitingQueue represents nodes assigned to this resource but not yet consuming capacity
-	WaitingQueue []*node.Node `json:"waiting_queue"`
+	WaitingQueue []*Node `json:"waiting_queue"`
 	mu           sync.RWMutex
 }
 
@@ -55,14 +53,14 @@ func NewResource(id string, capacity int) *Resource {
 		ID:           id,
 		Name:         id,
 		Capacity:     capacity,
-		Nodes:        make([]*node.Node, 0),
-		WaitingQueue: make([]*node.Node, 0),
+		Nodes:        make([]*Node, 0),
+		WaitingQueue: make([]*Node, 0),
 	}
 }
 
 // AddNode assigns a node to the resource by placing it into the waiting queue.
 // Capacity is enforced when allocating from waiting -> service.
-func (r *Resource) AddNode(n *node.Node) bool {
+func (r *Resource) AddNode(n *Node) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -122,7 +120,7 @@ func (r *Resource) RemoveNode(nodeID string) bool {
 
 // GetNode looks up a node in the resource by ID, searching both the service and waiting queues.
 // It returns nil if the node is not present.
-func (r *Resource) GetNode(nodeID string) *node.Node {
+func (r *Resource) GetNode(nodeID string) *Node {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

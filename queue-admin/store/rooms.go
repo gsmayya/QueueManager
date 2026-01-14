@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 
-	"queue-admin/models"
+	"queue-common/models"
 )
 
 type RoomStore interface {

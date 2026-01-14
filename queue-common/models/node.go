@@ -1,16 +1,9 @@
-package node
+package models
 
 import (
 	"sync"
 	"time"
 )
-
-// Entity is the domain object referenced by a Node.
-// In this service it's intentionally minimal (just a name) and is embedded in API payloads.
-type Entity struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name"`
-}
 
 // Node is the unit of work managed by the queue.
 //

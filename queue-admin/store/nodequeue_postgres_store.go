@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"queue-admin/models"
+	"queue-common/models"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )

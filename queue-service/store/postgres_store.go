@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"queue-common/models"
 	"strings"
 	"time"
-
-	"queue-service/resource"
 )
 
 type PostgresStore struct {
@@ -18,14 +17,14 @@ func NewPostgresStore(db *sql.DB) *PostgresStore {
 	return &PostgresStore{db: db}
 }
 
-func (s *PostgresStore) ListResources(ctx context.Context) ([]*resource.Resource, error) {
+func (s *PostgresStore) ListResources(ctx context.Context) ([]*models.Resource, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, name, capacity FROM resources WHERE deleted_at IS NULL ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	out := make([]*resource.Resource, 0)
+	out := make([]*models.Resource, 0)
 	for rows.Next() {
 		var id string
 		var name string
@@ -33,7 +32,7 @@ func (s *PostgresStore) ListResources(ctx context.Context) ([]*resource.Resource
 		if err := rows.Scan(&id, &name, &cap); err != nil {
 			return nil, err
 		}
-		r := resource.NewResource(id, cap)
+		r := models.NewResource(id, cap)
 		r.Name = name
 		out = append(out, r)
 	}

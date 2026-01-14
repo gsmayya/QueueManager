@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"queue-service/node"
-	"queue-service/store"
+	"queue-common/models"
 	"queue-common/utils"
+	"queue-service/store"
 )
 
 // ResourcesMetricsHandler handles GET /resources/metrics.
@@ -37,7 +37,7 @@ func (qs *QueueService) ResourcesMetricsHandler(w http.ResponseWriter, r *http.R
 	// Snapshot node metadata + in-memory logs (fallback if DB logs are unavailable).
 	nodeIDs := make([]string, 0, len(qs.nodes))
 	snaps := make(map[string]nodeSnapshot, len(qs.nodes))
-	memLogs := make(map[string][]node.NodeLog, len(qs.nodes))
+	memLogs := make(map[string][]models.NodeLog, len(qs.nodes))
 	for id, n := range qs.nodes {
 		entityName := ""
 		if n.Entity != nil {
@@ -52,7 +52,7 @@ func (qs *QueueService) ResourcesMetricsHandler(w http.ResponseWriter, r *http.R
 		nodeIDs = append(nodeIDs, id)
 
 		if len(n.Log) > 0 {
-			cp := make([]node.NodeLog, len(n.Log))
+			cp := make([]models.NodeLog, len(n.Log))
 			copy(cp, n.Log)
 			memLogs[id] = cp
 		} else {

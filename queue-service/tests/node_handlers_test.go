@@ -5,18 +5,17 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"queue-common/models"
 	"testing"
 
-	"queue-service/node"
 	queueservicepkg "queue-service/queueservice"
-	resourcepkg "queue-service/resource"
 )
 
 func TestCreateNodeHandler(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
 
 	// Test successful creation
-	reqBody := node.CreateNodeRequest{EntityName: "test-entity"}
+	reqBody := models.CreateNodeRequest{EntityName: "test-entity"}
 	jsonBody, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/nodes", bytes.NewBuffer(jsonBody))
@@ -28,7 +27,7 @@ func TestCreateNodeHandler(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
 	}
 
-	var created node.Node
+	var created models.Node
 	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
 		t.Errorf("Failed to decode response: %v", err)
 	}
@@ -45,7 +44,7 @@ func TestCreateNodeHandler(t *testing.T) {
 	}
 
 	// Test missing entity_name
-	reqBody = node.CreateNodeRequest{EntityName: ""}
+	reqBody = models.CreateNodeRequest{EntityName: ""}
 	jsonBody, _ = json.Marshal(reqBody)
 
 	req = httptest.NewRequest(http.MethodPost, "/nodes", bytes.NewBuffer(jsonBody))
@@ -70,15 +69,15 @@ func TestCreateNodeHandler(t *testing.T) {
 
 func TestMoveNodeHandler(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 3)
-	resource2 := resourcepkg.NewResource("resource-2", 2)
+	resource1 := models.NewResource("resource-1", 3)
+	resource2 := models.NewResource("resource-2", 2)
 	qs.AddResource(resource1)
 	qs.AddResource(resource2)
 
 	created, _ := qs.CreateNode("test-entity")
 
 	// Test successful move
-	reqBody := node.MoveNodeRequest{TargetResourceID: "resource-1"}
+	reqBody := models.MoveNodeRequest{TargetResourceID: "resource-1"}
 	jsonBody, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/nodes/"+created.ID+"/move", bytes.NewBuffer(jsonBody))
@@ -86,7 +85,7 @@ func TestMoveNodeHandler(t *testing.T) {
 
 	qs.MoveNodeHandler(w, req, created.ID)
 
-	var moved node.Node
+	var moved models.Node
 	if err := json.NewDecoder(w.Body).Decode(&moved); err != nil {
 		t.Errorf("Failed to decode response: %v", err)
 	}
@@ -96,7 +95,7 @@ func TestMoveNodeHandler(t *testing.T) {
 	}
 
 	// Test missing target_resource_id
-	reqBody = node.MoveNodeRequest{TargetResourceID: ""}
+	reqBody = models.MoveNodeRequest{TargetResourceID: ""}
 	jsonBody, _ = json.Marshal(reqBody)
 
 	req = httptest.NewRequest(http.MethodPost, "/nodes/"+created.ID+"/move", bytes.NewBuffer(jsonBody))
@@ -109,7 +108,7 @@ func TestMoveNodeHandler(t *testing.T) {
 	}
 
 	// Test non-existent node
-	reqBody = node.MoveNodeRequest{TargetResourceID: "resource-1"}
+	reqBody = models.MoveNodeRequest{TargetResourceID: "resource-1"}
 	jsonBody, _ = json.Marshal(reqBody)
 
 	req = httptest.NewRequest(http.MethodPost, "/nodes/non-existent/move", bytes.NewBuffer(jsonBody))
@@ -122,7 +121,7 @@ func TestMoveNodeHandler(t *testing.T) {
 	}
 
 	// Test non-existent resource
-	reqBody = node.MoveNodeRequest{TargetResourceID: "non-existent"}
+	reqBody = models.MoveNodeRequest{TargetResourceID: "non-existent"}
 	jsonBody, _ = json.Marshal(reqBody)
 
 	req = httptest.NewRequest(http.MethodPost, "/nodes/"+created.ID+"/move", bytes.NewBuffer(jsonBody))
@@ -137,7 +136,7 @@ func TestMoveNodeHandler(t *testing.T) {
 
 func TestCompleteNodeHandler(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 3)
+	resource1 := models.NewResource("resource-1", 3)
 	qs.AddResource(resource1)
 
 	created, _ := qs.CreateNode("test-entity")
@@ -153,7 +152,7 @@ func TestCompleteNodeHandler(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var completed node.Node
+	var completed models.Node
 	if err := json.NewDecoder(w.Body).Decode(&completed); err != nil {
 		t.Errorf("Failed to decode response: %v", err)
 	}
@@ -175,7 +174,7 @@ func TestCompleteNodeHandler(t *testing.T) {
 
 func TestAllocateNodeHandler(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	resource1 := resourcepkg.NewResource("resource-1", 1)
+	resource1 := models.NewResource("resource-1", 1)
 	qs.AddResource(resource1)
 
 	node1, _ := qs.CreateNode("entity-1")
@@ -214,7 +213,7 @@ func TestGetNodeHandler(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var retrieved node.Node
+	var retrieved models.Node
 	if err := json.NewDecoder(w.Body).Decode(&retrieved); err != nil {
 		t.Errorf("Failed to decode response: %v", err)
 	}
@@ -248,7 +247,7 @@ func TestListNodesHandler(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var nodes []node.Node
+	var nodes []models.Node
 	if err := json.NewDecoder(w.Body).Decode(&nodes); err != nil {
 		t.Errorf("Failed to decode response: %v", err)
 	}
@@ -260,8 +259,8 @@ func TestListNodesHandler(t *testing.T) {
 
 func TestListResourcesHandler(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	qs.AddResource(resourcepkg.NewResource("resource-1", 5))
-	qs.AddResource(resourcepkg.NewResource("resource-2", 3))
+	qs.AddResource(models.NewResource("resource-1", 5))
+	qs.AddResource(models.NewResource("resource-2", 3))
 
 	req := httptest.NewRequest(http.MethodGet, "/resources", nil)
 	w := httptest.NewRecorder()
@@ -272,7 +271,7 @@ func TestListResourcesHandler(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resources []resourcepkg.Resource
+	var resources []models.Resource
 	if err := json.NewDecoder(w.Body).Decode(&resources); err != nil {
 		t.Errorf("Failed to decode response: %v", err)
 	}

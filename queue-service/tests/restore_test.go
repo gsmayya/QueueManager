@@ -2,11 +2,11 @@ package tests
 
 import (
 	"context"
+	"queue-common/models"
 	"testing"
 	"time"
 
 	queueservicepkg "queue-service/queueservice"
-	resourcepkg "queue-service/resource"
 	storepkg "queue-service/store"
 )
 
@@ -15,7 +15,7 @@ type stubStore struct {
 	states map[string]storepkg.NodeState
 }
 
-func (s *stubStore) ListResources(ctx context.Context) ([]*resourcepkg.Resource, error) {
+func (s *stubStore) ListResources(ctx context.Context) ([]*models.Resource, error) {
 	return nil, nil
 }
 
@@ -65,8 +65,8 @@ func TestRestoreFromStore_RebuildsQueuesAndOrder(t *testing.T) {
 	}
 
 	qs := queueservicepkg.NewQueueServiceWithStore(store)
-	qs.AddResource(resourcepkg.NewResource("Room 1", 5))
-	qs.AddResource(resourcepkg.NewResource("Room 2", 5))
+	qs.AddResource(models.NewResource("Room 1", 5))
+	qs.AddResource(models.NewResource("Room 2", 5))
 
 	if err := qs.RestoreFromStore(context.Background()); err != nil {
 		t.Fatalf("RestoreFromStore failed: %v", err)

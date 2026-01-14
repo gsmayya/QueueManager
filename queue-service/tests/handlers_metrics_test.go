@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"queue-common/models"
 	"testing"
 	"time"
 
 	queueservicepkg "queue-service/queueservice"
-	resourcepkg "queue-service/resource"
 	storepkg "queue-service/store"
 )
 
 func TestNodesMetricsHandler_CompletesAndComputesWaitingSegments(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 1)
+	r1 := models.NewResource("resource-1", 1)
 	qs.AddResource(r1)
 
 	n, err := qs.CreateNode("entity-1")
@@ -73,7 +73,7 @@ func TestNodesMetricsHandler_CompletesAndComputesWaitingSegments(t *testing.T) {
 
 func TestNodesMetricsHandler_ActiveNodeHasOpenWaitingSegmentClosedAtNow(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 1)
+	r1 := models.NewResource("resource-1", 1)
 	qs.AddResource(r1)
 
 	n, err := qs.CreateNode("entity-1")
@@ -122,8 +122,8 @@ func TestNodesMetricsHandler_MethodNotAllowed(t *testing.T) {
 
 func TestNodesMetricsHandler_MoveWhileWaiting_ClosesAndOpensSegments(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 5)
-	r2 := resourcepkg.NewResource("resource-2", 5)
+	r1 := models.NewResource("resource-1", 5)
+	r2 := models.NewResource("resource-2", 5)
 	qs.AddResource(r1)
 	qs.AddResource(r2)
 
@@ -166,8 +166,8 @@ func TestNodesMetricsHandler_MoveWhileWaiting_ClosesAndOpensSegments(t *testing.
 
 func TestNodesMetricsHandler_RevisitResource_AddsNewEntries(t *testing.T) {
 	qs := queueservicepkg.NewQueueService()
-	r1 := resourcepkg.NewResource("resource-1", 5)
-	r2 := resourcepkg.NewResource("resource-2", 5)
+	r1 := models.NewResource("resource-1", 5)
+	r2 := models.NewResource("resource-2", 5)
 	qs.AddResource(r1)
 	qs.AddResource(r2)
 
@@ -215,7 +215,7 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 	}
 
 	qs := queueservicepkg.NewQueueServiceWithStore(store)
-	qs.AddResource(resourcepkg.NewResource(rid, 5))
+	qs.AddResource(models.NewResource(rid, 5))
 
 	created, _ := qs.CreateNode("entity-1")
 	nid := created.ID

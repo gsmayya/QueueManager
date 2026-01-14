@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	. "queue-admin/handlers"
-	"queue-admin/models"
+	"queue-common/models"
 )
 
 type listByPhoneStore struct {

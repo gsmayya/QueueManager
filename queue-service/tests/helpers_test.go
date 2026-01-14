@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"queue-common/models"
 	"testing"
 	"time"
 
-	nodepkg "queue-service/node"
 	queueservicepkg "queue-service/queueservice"
-	resourcepkg "queue-service/resource"
 	storepkg "queue-service/store"
 )
 
@@ -20,7 +19,7 @@ func mustJSONDecode[T any](t *testing.T, rr *httptest.ResponseRecorder, out *T) 
 	}
 }
 
-func mustCreateQSWithResources(t *testing.T, resources ...*resourcepkg.Resource) *queueservicepkg.QueueService {
+func mustCreateQSWithResources(t *testing.T, resources ...*models.Resource) *queueservicepkg.QueueService {
 	t.Helper()
 	qs := queueservicepkg.NewQueueService()
 	for _, r := range resources {
@@ -31,7 +30,7 @@ func mustCreateQSWithResources(t *testing.T, resources ...*resourcepkg.Resource)
 
 func ptr[T any](v T) *T { return &v } // used by restore tests
 
-func ids(ns []*nodepkg.Node) []string {
+func ids(ns []*models.Node) []string {
 	out := make([]string, 0, len(ns))
 	for _, n := range ns {
 		out = append(out, n.ID)
@@ -45,7 +44,7 @@ type stubReadLogsStore struct {
 	logsByNode map[string][]storepkg.NodeLogRow
 }
 
-func (s *stubReadLogsStore) ListResources(ctx context.Context) ([]*resourcepkg.Resource, error) {
+func (s *stubReadLogsStore) ListResources(ctx context.Context) ([]*models.Resource, error) {
 	return nil, nil
 }
 func (s *stubReadLogsStore) ListNodes(ctx context.Context) ([]storepkg.PersistedNode, error) {

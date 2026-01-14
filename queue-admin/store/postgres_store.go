@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"queue-admin/models"
+	"queue-common/models"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
