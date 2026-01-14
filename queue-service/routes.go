@@ -7,9 +7,8 @@ import (
 	"queue-common/models"
 	"strings"
 
+	"queue-service/qsstore"
 	"queue-service/queueservice"
-
-	"queue-service/store"
 )
 
 // setupRoutes registers the HTTP routes for the NodeQueue service.
@@ -86,7 +85,7 @@ func setupRoutes(qs *queueservice.QueueService) {
 	http.HandleFunc("/resources", corsMiddleware(qs.ListResourcesHandler))
 }
 
-func setupResources(fileName string, queueService *queueservice.QueueService, store store.Store) []*models.Resource {
+func setupResources(fileName string, queueService *queueservice.QueueService, store qsstore.Store) []*models.Resource {
 	// Prefer DB resources when available, but fall back to local defaults if DB isn't configured/reachable.
 	if store != nil {
 		if dbResources, err := store.ListResources(context.Background()); err == nil && len(dbResources) > 0 {

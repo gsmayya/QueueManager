@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"queue-common/models"
+	cmstore "queue-common/store"
 	"testing"
 	"time"
 
 	queueservicepkg "queue-service/queueservice"
-	storepkg "queue-service/store"
 )
 
 func TestNodesMetricsHandler_CompletesAndComputesWaitingSegments(t *testing.T) {
@@ -40,7 +40,7 @@ func TestNodesMetricsHandler_CompletesAndComputesWaitingSegments(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.NodesMetricsResponse
+	var resp models.NodesMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestNodesMetricsHandler_ActiveNodeHasOpenWaitingSegmentClosedAtNow(t *testi
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.NodesMetricsResponse
+	var resp models.NodesMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestNodesMetricsHandler_MoveWhileWaiting_ClosesAndOpensSegments(t *testing.
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.NodesMetricsResponse
+	var resp models.NodesMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestNodesMetricsHandler_RevisitResource_AddsNewEntries(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.NodesMetricsResponse
+	var resp models.NodesMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -211,7 +211,7 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 	rid := "resource-1"
 
 	store := &stubReadLogsStore{
-		logsByNode: map[string][]storepkg.NodeLogRow{},
+		logsByNode: map[string][]cmstore.NodeLogRow{},
 	}
 
 	qs := queueservicepkg.NewQueueServiceWithStore(store)
@@ -227,7 +227,7 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 	n.Log = nil
 
 	// Provide DB logs for this node ID; handler should prefer these over in-memory logs.
-	store.logsByNode[nid] = []storepkg.NodeLogRow{
+	store.logsByNode[nid] = []cmstore.NodeLogRow{
 		{NodeID: nid, Action: "moved_to_waiting_queue", ResourceID: &rid, TS: base.Add(1 * time.Second)},
 		{NodeID: nid, Action: "moved_to_service_queue", ResourceID: &rid, TS: base.Add(3 * time.Second)},
 		{NodeID: nid, Action: "completed", ResourceID: &rid, TS: base.Add(10 * time.Second)},
@@ -241,7 +241,7 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.NodesMetricsResponse
+	var resp models.NodesMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}

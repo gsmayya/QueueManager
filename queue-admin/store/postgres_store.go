@@ -7,6 +7,8 @@ import (
 
 	"queue-common/models"
 
+	. "queue-common/store"
+
 	"github.com/jackc/pgx/v5/pgconn"
 )
 

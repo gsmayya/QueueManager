@@ -1,41 +1,11 @@
-package store
+package qsstore
 
 import (
 	"context"
 	"queue-common/models"
+	. "queue-common/store"
 	"time"
 )
-
-type PersistedNode struct {
-	NodeID     string
-	EntityID   string
-	EntityName string
-	NodeName   string
-	ResourceID *string
-	Completed  bool
-	CreatedAt  time.Time
-}
-
-type QueueKind string
-
-const (
-	QueueKindWaiting QueueKind = "waiting"
-	QueueKindService QueueKind = "service"
-)
-
-type NodeState struct {
-	Queue QueueKind
-	TS    time.Time
-}
-
-// NodeLogRow is a persisted lifecycle/audit event for a node.
-// It is intentionally stored in the db package to avoid coupling Store to the node package.
-type NodeLogRow struct {
-	NodeID     string
-	Action     string
-	ResourceID *string
-	TS         time.Time
-}
 
 // Store is an optional persistence/audit sink for QueueService.
 // Implementations should be safe for best-effort writes (callers may ignore errors to keep API behavior stable).

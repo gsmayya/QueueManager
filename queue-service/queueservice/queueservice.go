@@ -6,14 +6,15 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"queue-service/qsstore"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"queue-common/models"
+	"queue-common/store"
 	"queue-common/utils"
-	"queue-service/store"
 
 	"github.com/google/uuid"
 )
@@ -30,7 +31,7 @@ import (
 type QueueService struct {
 	resources    map[string]*models.Resource
 	nodes        map[string]*models.Node
-	store        store.Store
+	store        qsstore.Store
 	sessionStart time.Time
 	mu           sync.RWMutex
 }
@@ -42,7 +43,7 @@ func NewQueueService() *QueueService {
 
 // NewQueueServiceWithStore constructs a QueueService with an optional persistence store.
 // The store is used on a best-effort basis to avoid changing API behavior if the DB is down.
-func NewQueueServiceWithStore(store store.Store) *QueueService {
+func NewQueueServiceWithStore(store qsstore.Store) *QueueService {
 	return &QueueService{
 		resources:    make(map[string]*models.Resource),
 		nodes:        make(map[string]*models.Node),

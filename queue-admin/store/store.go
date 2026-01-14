@@ -2,16 +2,8 @@ package store
 
 import (
 	"context"
-	"errors"
 
 	"queue-common/models"
-)
-
-var (
-	// ErrNotFound indicates the requested record does not exist.
-	ErrNotFound = errors.New("not found")
-	// ErrConflict indicates a uniqueness constraint conflict.
-	ErrConflict = errors.New("conflict")
 )
 
 type Store interface {

@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"queue-common/models"
+	"queue-common/store"
+	storepkg "queue-common/store"
 	"testing"
 	"time"
 
 	queueservicepkg "queue-service/queueservice"
-
-	storepkg "queue-service/store"
 )
 
 func TestResourcesMetricsHandler_MethodNotAllowed(t *testing.T) {
@@ -49,7 +49,7 @@ func TestResourcesMetricsHandler_ReportsAllResources_AndCounts(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.ResourcesSessionMetricsResponse
+	var resp models.ResourcesSessionMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestResourcesMetricsHandler_ReportsAllResources_AndCounts(t *testing.T) {
 		t.Fatalf("expected 2 resources in response, got %d", len(resp.Resources))
 	}
 
-	byID := map[string]queueservicepkg.ResourceSessionMetrics{}
+	byID := map[string]models.ResourceSessionMetrics{}
 	for _, m := range resp.Resources {
 		byID[m.ResourceID] = m
 	}
@@ -114,7 +114,7 @@ func TestResourcesMetricsHandler_CountsRevisits(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.ResourcesSessionMetricsResponse
+	var resp models.ResourcesSessionMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestResourcesMetricsHandler_PrefersDBLogsWhenAvailable(t *testing.T) {
 	// when a Store is configured (durable across restarts).
 	base := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	store := &stubReadLogsStore{logsByNode: map[string][]storepkg.NodeLogRow{}}
+	store := &stubReadLogsStore{logsByNode: map[string][]store.NodeLogRow{}}
 	qs := queueservicepkg.NewQueueServiceWithStore(store)
 	r1 := models.NewResource("resource-1", 5)
 	qs.AddResource(r1)
@@ -164,7 +164,7 @@ func TestResourcesMetricsHandler_PrefersDBLogsWhenAvailable(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var resp queueservicepkg.ResourcesSessionMetricsResponse
+	var resp models.ResourcesSessionMetricsResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}

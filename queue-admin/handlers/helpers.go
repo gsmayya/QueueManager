@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"queue-admin/store"
+	"queue-common/store"
 	"queue-common/utils"
 )
 

@@ -1,10 +1,11 @@
-package store
+package qsstore
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
 	"queue-common/models"
+	. "queue-common/store"
 	"strings"
 	"time"
 )

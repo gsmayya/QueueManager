@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"queue-common/models"
+	"queue-common/store"
 	"testing"
 	"time"
 
+	storepkg "queue-service/qsstore"
 	queueservicepkg "queue-service/queueservice"
-	storepkg "queue-service/store"
 )
 
 func mustJSONDecode[T any](t *testing.T, rr *httptest.ResponseRecorder, out *T) {
@@ -41,20 +42,20 @@ func ids(ns []*models.Node) []string {
 // stubReadLogsStore is used to test DB-backed metrics calculations without a real DB.
 // Other methods are no-ops/empty to satisfy storepkg.Store.
 type stubReadLogsStore struct {
-	logsByNode map[string][]storepkg.NodeLogRow
+	logsByNode map[string][]store.NodeLogRow
 }
 
 func (s *stubReadLogsStore) ListResources(ctx context.Context) ([]*models.Resource, error) {
 	return nil, nil
 }
-func (s *stubReadLogsStore) ListNodes(ctx context.Context) ([]storepkg.PersistedNode, error) {
+func (s *stubReadLogsStore) ListNodes(ctx context.Context) ([]store.PersistedNode, error) {
 	return nil, nil
 }
-func (s *stubReadLogsStore) ListLatestNodeStates(ctx context.Context) (map[string]storepkg.NodeState, error) {
-	return map[string]storepkg.NodeState{}, nil
+func (s *stubReadLogsStore) ListLatestNodeStates(ctx context.Context) (map[string]store.NodeState, error) {
+	return map[string]store.NodeState{}, nil
 }
-func (s *stubReadLogsStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]storepkg.NodeLogRow, error) {
-	out := make(map[string][]storepkg.NodeLogRow, len(nodeIDs))
+func (s *stubReadLogsStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]store.NodeLogRow, error) {
+	out := make(map[string][]store.NodeLogRow, len(nodeIDs))
 	for _, id := range nodeIDs {
 		out[id] = s.logsByNode[id]
 	}

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	storepkg "queue-common/store"
 	queueservicepkg "queue-service/queueservice"
-	storepkg "queue-service/store"
 )
 
 type stubStore struct {
