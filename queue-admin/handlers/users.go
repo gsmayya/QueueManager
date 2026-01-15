@@ -29,7 +29,7 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out, err := s.store.CreateUser(r.Context(), req.UserID, req.Name, req.Email, string(hash))
+	out, err := s.userStore.CreateUser(r.Context(), req.UserID, req.Name, req.Email, string(hash))
 	if err != nil {
 		if mapStoreErr(w, err) {
 			return
@@ -41,7 +41,7 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) ListUsers(w http.ResponseWriter, r *http.Request) {
-	out, err := s.store.ListUsers(r.Context())
+	out, err := s.userStore.ListUsers(r.Context())
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -53,7 +53,7 @@ func (s *Service) GetUser(w http.ResponseWriter, r *http.Request, id string) {
 	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
-	out, err := s.store.GetUser(r.Context(), id)
+	out, err := s.userStore.GetUser(r.Context(), id)
 	if err != nil {
 		if mapStoreErr(w, err) {
 			return
@@ -113,7 +113,7 @@ func (s *Service) UpdateUser(w http.ResponseWriter, r *http.Request, id string) 
 		hashPtr = &h
 	}
 
-	out, err := s.store.UpdateUser(r.Context(), id, req.UserID, req.Name, req.Email, hashPtr)
+	out, err := s.userStore.UpdateUser(r.Context(), id, req.UserID, req.Name, req.Email, hashPtr)
 	if err != nil {
 		if mapStoreErr(w, err) {
 			return
@@ -128,7 +128,7 @@ func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request, id string) 
 	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
-	if err := s.store.DeleteUser(r.Context(), id); err != nil {
+	if err := s.userStore.DeleteUser(r.Context(), id); err != nil {
 		if mapStoreErr(w, err) {
 			return
 		}

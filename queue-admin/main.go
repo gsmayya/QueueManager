@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"queue-admin/handlers"
-	"queue-admin/store"
 	"queue-common/db"
+	"queue-common/store"
 )
 
 func main() {
@@ -30,9 +30,11 @@ func main() {
 	}
 	defer nodequeueConn.Close()
 
-	st := store.NewPostgresStore(dbConn)
-	roomStore := store.NewNodequeuePostgresStore(nodequeueConn)
-	svc := handlers.NewService(st, roomStore)
+	userStore := store.NewUserStore(dbConn)
+	entityStore := store.NewEntityStore(dbConn)
+	roomStore := store.NewResourceStore(nodequeueConn)
+
+	svc := handlers.NewService(entityStore, userStore, roomStore)
 
 	setupRoutes(svc)
 

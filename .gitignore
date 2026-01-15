@@ -76,8 +76,11 @@ out/
 
 .gocache
 
-nodequeue-master-service/nodequeue-master-service 
-nodequeue-service/nodequeue-service
+queue-service/nodequeue-master-service 
+queue-service/nodequeue-service
+queue-service/queue-service
+queue-admin/queue-admin
 
 .cursor/
 .tmp/
+

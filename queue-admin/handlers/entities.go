@@ -20,7 +20,7 @@ func (s *Service) CreateEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out, err := s.store.CreateEntity(r.Context(), req)
+	out, err := s.entityStore.CreateEntity(r.Context(), req)
 	if err != nil {
 		if mapStoreErr(w, err) {
 			return
@@ -38,9 +38,9 @@ func (s *Service) ListEntities(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	if phone != "" {
-		out, err = s.store.ListEntitiesByPhone(r.Context(), phone)
+		out, err = s.entityStore.ListEntitiesByPhone(r.Context(), phone)
 	} else {
-		out, err = s.store.ListEntities(r.Context())
+		out, err = s.entityStore.ListEntities(r.Context())
 	}
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
@@ -53,7 +53,7 @@ func (s *Service) GetEntity(w http.ResponseWriter, r *http.Request, id string) {
 	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
-	out, err := s.store.GetEntity(r.Context(), id)
+	out, err := s.entityStore.GetEntity(r.Context(), id)
 	if err != nil {
 		if mapStoreErr(w, err) {
 			return
@@ -90,7 +90,7 @@ func (s *Service) UpdateEntity(w http.ResponseWriter, r *http.Request, id string
 		}
 	}
 
-	out, err := s.store.UpdateEntity(r.Context(), id, req)
+	out, err := s.entityStore.UpdateEntity(r.Context(), id, req)
 	if err != nil {
 		if mapStoreErr(w, err) {
 			return
@@ -105,7 +105,7 @@ func (s *Service) DeleteEntity(w http.ResponseWriter, r *http.Request, id string
 	if !utils.ParseUUIDParam(w, id) {
 		return
 	}
-	if err := s.store.DeleteEntity(r.Context(), id); err != nil {
+	if err := s.entityStore.DeleteEntity(r.Context(), id); err != nil {
 		if mapStoreErr(w, err) {
 			return
 		}

@@ -197,7 +197,7 @@ func mustTime(s string) time.Time {
 
 func TestEntitiesCRUD(t *testing.T) {
 	st := newMemStore()
-	svc := NewService(st, nil)
+	svc := NewService(st, st, nil)
 
 	// Create
 	body, _ := json.Marshal(map[string]any{"name": "Acme", "phone": "123", "email": "a@b.com"})
@@ -227,7 +227,7 @@ func TestEntitiesCRUD(t *testing.T) {
 
 func TestUsersCreate_HashesPassword(t *testing.T) {
 	st := newMemStore()
-	svc := NewService(st, nil)
+	svc := NewService(st, st, nil)
 
 	body, _ := json.Marshal(map[string]any{
 		"user_id":  "u1",

@@ -8,17 +8,15 @@ import (
 
 	"queue-common/models"
 
-	. "queue-common/store"
-
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type NodequeuePostgresStore struct {
+type ResourceStore struct {
 	db *sql.DB
 }
 
-func NewNodequeuePostgresStore(db *sql.DB) *NodequeuePostgresStore {
-	return &NodequeuePostgresStore{db: db}
+func NewResourceStore(db *sql.DB) *ResourceStore {
+	return &ResourceStore{db: db}
 }
 
 func isUniqueViolationNodequeue(err error) bool {
@@ -29,7 +27,7 @@ func isUniqueViolationNodequeue(err error) bool {
 	return false
 }
 
-func (s *NodequeuePostgresStore) CreateRoom(ctx context.Context, in models.CreateRoomRequest) (models.Room, error) {
+func (s *ResourceStore) CreateRoom(ctx context.Context, in models.CreateRoomRequest) (models.Room, error) {
 	var out models.Room
 	row := s.db.QueryRowContext(ctx, `
 		INSERT INTO resources (id, name, capacity)
@@ -45,7 +43,7 @@ func (s *NodequeuePostgresStore) CreateRoom(ctx context.Context, in models.Creat
 	return out, nil
 }
 
-func (s *NodequeuePostgresStore) ListRooms(ctx context.Context, includeDeleted bool) ([]models.Room, error) {
+func (s *ResourceStore) ListRooms(ctx context.Context, includeDeleted bool) ([]models.Room, error) {
 	q := `
 		SELECT id, name, capacity, deleted_at, created_at
 		FROM resources
@@ -77,7 +75,7 @@ func (s *NodequeuePostgresStore) ListRooms(ctx context.Context, includeDeleted b
 	return out, rows.Err()
 }
 
-func (s *NodequeuePostgresStore) GetRoom(ctx context.Context, id string) (models.Room, error) {
+func (s *ResourceStore) GetRoom(ctx context.Context, id string) (models.Room, error) {
 	var r models.Room
 	var deletedAt sql.NullTime
 	err := s.db.QueryRowContext(ctx, `
@@ -98,7 +96,7 @@ func (s *NodequeuePostgresStore) GetRoom(ctx context.Context, id string) (models
 	return r, nil
 }
 
-func (s *NodequeuePostgresStore) UpdateRoom(ctx context.Context, id string, in models.UpdateRoomRequest) (models.Room, error) {
+func (s *ResourceStore) UpdateRoom(ctx context.Context, id string, in models.UpdateRoomRequest) (models.Room, error) {
 	// If DeletedAt is set explicitly, allow setting it (including null via omitted).
 	var r models.Room
 	var deletedAt sql.NullTime
@@ -133,7 +131,7 @@ func (s *NodequeuePostgresStore) UpdateRoom(ctx context.Context, id string, in m
 	return r, nil
 }
 
-func (s *NodequeuePostgresStore) SoftDeleteRoom(ctx context.Context, id string) error {
+func (s *ResourceStore) SoftDeleteRoom(ctx context.Context, id string) error {
 	now := time.Now()
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE resources SET deleted_at = $2 WHERE id = $1

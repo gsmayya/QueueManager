@@ -24,7 +24,7 @@ func (s *listByPhoneStore) ListEntitiesByPhone(ctx context.Context, phone string
 
 func TestListEntities_WithPhoneQuery_UsesPhoneFilter(t *testing.T) {
 	st := &listByPhoneStore{memStore: newMemStore()}
-	svc := NewService(st, nil)
+	svc := NewService(st, st, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/entities?phone=123", nil)
 	w := httptest.NewRecorder()

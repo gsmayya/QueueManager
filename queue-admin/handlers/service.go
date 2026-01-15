@@ -1,12 +1,15 @@
 package handlers
 
-import "queue-admin/store"
+import (
+	"queue-common/store"
+)
 
 type Service struct {
-	store     store.Store
-	roomStore store.RoomStore
+	entityStore store.EntityStore
+	userStore   store.UserStore
+	roomStore   store.RoomStore
 }
 
-func NewService(s store.Store, roomStore store.RoomStore) *Service {
-	return &Service{store: s, roomStore: roomStore}
+func NewService(entityStore store.EntityStore, userStore store.UserStore, roomStore store.RoomStore) *Service {
+	return &Service{entityStore: entityStore, userStore: userStore, roomStore: roomStore}
 }
