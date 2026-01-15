@@ -52,9 +52,9 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 
 	// Best-effort: prefer DB logs (complete history across restarts), fall back to in-memory logs.
 	var dbLogs map[string][]store.NodeLogRow
-	if qs.store != nil && len(nodeIDs) > 0 {
+	if qs.nodestore != nil && len(nodeIDs) > 0 {
 		var err error
-		dbLogs, err = qs.store.ListNodeLogs(r.Context(), nodeIDs)
+		dbLogs, err = qs.nodestore.ListNodeLogs(r.Context(), nodeIDs)
 		if err != nil {
 			log.Printf("[DB] ListNodeLogs failed (falling back to in-memory logs): %v", err)
 			dbLogs = nil

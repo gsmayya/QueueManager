@@ -139,7 +139,7 @@ func TestResourcesMetricsHandler_PrefersDBLogsWhenAvailable(t *testing.T) {
 	base := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	store := &stubReadLogsStore{logsByNode: map[string][]store.NodeLogRow{}}
-	qs := queueservicepkg.NewQueueServiceWithStore(store)
+	qs := queueservicepkg.NewQueueServiceWithStore(store, nil)
 	r1 := models.NewResource("resource-1", 5)
 	qs.AddResource(r1)
 

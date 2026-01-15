@@ -64,7 +64,7 @@ func TestRestoreFromStore_RebuildsQueuesAndOrder(t *testing.T) {
 		},
 	}
 
-	qs := queueservicepkg.NewQueueServiceWithStore(store)
+	qs := queueservicepkg.NewQueueServiceWithStore(store, nil)
 	qs.AddResource(models.NewResource("Room 1", 5))
 	qs.AddResource(models.NewResource("Room 2", 5))
 

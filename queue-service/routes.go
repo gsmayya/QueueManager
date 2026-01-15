@@ -7,7 +7,7 @@ import (
 	"queue-common/models"
 	"strings"
 
-	"queue-service/qsstore"
+	"queue-common/store"
 	"queue-service/queueservice"
 )
 
@@ -85,10 +85,10 @@ func setupRoutes(qs *queueservice.QueueService) {
 	http.HandleFunc("/resources", corsMiddleware(qs.ListResourcesHandler))
 }
 
-func setupResources(queueService *queueservice.QueueService, store qsstore.Store) []*models.Resource {
+func setupResources(queueService *queueservice.QueueService, nodestore store.NodeStore, resourcestore store.ResStore) []*models.Resource {
 	// Prefer DB resources when available, but fall back to local defaults if DB isn't configured/reachable.
-	if store != nil {
-		if dbResources, err := store.ListResources(context.Background()); err == nil && len(dbResources) > 0 {
+	if resourcestore != nil {
+		if dbResources, err := resourcestore.ListResources(context.Background()); err == nil && len(dbResources) > 0 {
 			for _, r := range dbResources {
 				queueService.AddResource(r)
 				log.Printf("Initialized resource %s with capacity %d (from DB)", r.ID, r.Capacity)

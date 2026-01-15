@@ -1,49 +1,22 @@
-package qsstore
+package store
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
-	"queue-common/models"
-	. "queue-common/store"
 	"strings"
 	"time"
 )
 
-type PostgresStore struct {
+type NodeStoreImpl struct {
 	db *sql.DB
 }
 
-func NewPostgresStore(db *sql.DB) *PostgresStore {
-	return &PostgresStore{db: db}
+func NewNodeStore(db *sql.DB) *NodeStoreImpl {
+	return &NodeStoreImpl{db: db}
 }
 
-func (s *PostgresStore) ListResources(ctx context.Context) ([]*models.Resource, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, capacity FROM resources WHERE deleted_at IS NULL ORDER BY id`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	out := make([]*models.Resource, 0)
-	for rows.Next() {
-		var id string
-		var name string
-		var cap int
-		if err := rows.Scan(&id, &name, &cap); err != nil {
-			return nil, err
-		}
-		r := models.NewResource(id, cap)
-		r.Name = name
-		out = append(out, r)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (s *PostgresStore) ListNodes(ctx context.Context) ([]PersistedNode, error) {
+func (s *NodeStoreImpl) ListNodes(ctx context.Context) ([]PersistedNode, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT n.id::text, n.entity_id::text, e.name, COALESCE(n.node_name, ''), n.resource_id, n.completed, n.created_at
 		FROM nodes n
@@ -70,7 +43,7 @@ func (s *PostgresStore) ListNodes(ctx context.Context) ([]PersistedNode, error) 
 	return out, nil
 }
 
-func (s *PostgresStore) ListLatestNodeStates(ctx context.Context) (map[string]NodeState, error) {
+func (s *NodeStoreImpl) ListLatestNodeStates(ctx context.Context) (map[string]NodeState, error) {
 	// Latest service/waiting state per node based on node_logs.
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT DISTINCT ON (node_id) node_id::text, action, ts
@@ -103,7 +76,7 @@ func (s *PostgresStore) ListLatestNodeStates(ctx context.Context) (map[string]No
 	return out, nil
 }
 
-func (s *PostgresStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]NodeLogRow, error) {
+func (s *NodeStoreImpl) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]NodeLogRow, error) {
 	out := make(map[string][]NodeLogRow)
 	if len(nodeIDs) == 0 {
 		return out, nil
@@ -159,7 +132,7 @@ func (s *PostgresStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map
 	return out, nil
 }
 
-func (s *PostgresStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error {
+func (s *NodeStoreImpl) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -185,7 +158,7 @@ func (s *PostgresStore) PersistNodeCreated(ctx context.Context, nodeID, entityID
 	return tx.Commit()
 }
 
-func (s *PostgresStore) UpdateNodeResource(ctx context.Context, nodeID string, resourceID *string) error {
+func (s *NodeStoreImpl) UpdateNodeResource(ctx context.Context, nodeID string, resourceID *string) error {
 	_, err := s.db.ExecContext(ctx,
 		`UPDATE nodes SET resource_id = $2 WHERE id = $1::uuid`,
 		nodeID, resourceID,
@@ -193,7 +166,7 @@ func (s *PostgresStore) UpdateNodeResource(ctx context.Context, nodeID string, r
 	return err
 }
 
-func (s *PostgresStore) MarkNodeCompleted(ctx context.Context, nodeID string, completed bool) error {
+func (s *NodeStoreImpl) MarkNodeCompleted(ctx context.Context, nodeID string, completed bool) error {
 	_, err := s.db.ExecContext(ctx,
 		`UPDATE nodes SET completed = $2, resource_id = CASE WHEN $2 THEN NULL ELSE resource_id END WHERE id = $1::uuid`,
 		nodeID, completed,
@@ -201,7 +174,7 @@ func (s *PostgresStore) MarkNodeCompleted(ctx context.Context, nodeID string, co
 	return err
 }
 
-func (s *PostgresStore) InsertNodeLog(ctx context.Context, nodeID, action string, resourceID *string, ts time.Time) error {
+func (s *NodeStoreImpl) InsertNodeLog(ctx context.Context, nodeID, action string, resourceID *string, ts time.Time) error {
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO node_logs (node_id, action, resource_id, ts) VALUES ($1::uuid, $2, $3, $4)`,
 		nodeID, action, resourceID, ts,

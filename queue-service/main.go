@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	storepkg "queue-service/qsstore"
+	store "queue-common/store"
 	"queue-service/queueservice"
 
 	"queue-common/db"
@@ -25,20 +25,23 @@ func main() {
 		defer dbConn.Close()
 	}
 
-	var store storepkg.Store
+	var nodestore store.NodeStore
 	if dbConn != nil {
-		store = storepkg.NewPostgresStore(dbConn)
+		nodestore = store.NewNodeStore(dbConn)
+	}
+	var resourcestore store.ResStore
+	if dbConn != nil {
+		resourcestore = store.NewResStore(dbConn)
 	}
 
 	// Initialize queue service
-	queueService := queueservice.NewQueueServiceWithStore(store)
-
+	queueService := queueservice.NewQueueServiceWithStore(nodestore, resourcestore)
 	// Load resources from config (or fall back to defaults).
-	resources := setupResources(queueService, store)
+	resources := setupResources(queueService, nodestore, resourcestore)
 	log.Printf("Initialized %d resources", len(resources))
 
 	// Restore nodes + queue membership from DB (best-effort).
-	if store != nil {
+	if nodestore != nil {
 		if err := queueService.RestoreFromStore(context.Background()); err != nil {
 			log.Printf("[DB] restore state failed (continuing with empty node state): %v", err)
 		}

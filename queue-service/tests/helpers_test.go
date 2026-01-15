@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	storepkg "queue-service/qsstore"
 	queueservicepkg "queue-service/queueservice"
 )
 
@@ -74,4 +73,4 @@ func (s *stubReadLogsStore) InsertNodeLog(ctx context.Context, nodeID, action st
 	return nil
 }
 
-var _ storepkg.Store = (*stubReadLogsStore)(nil)
+var _ store.NodeStore = (*stubReadLogsStore)(nil)

@@ -210,11 +210,11 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 	base := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	rid := "resource-1"
 
-	store := &stubReadLogsStore{
+	nodestore := &stubReadLogsStore{
 		logsByNode: map[string][]cmstore.NodeLogRow{},
 	}
 
-	qs := queueservicepkg.NewQueueServiceWithStore(store)
+	qs := queueservicepkg.NewQueueServiceWithStore(nodestore, nil)
 	qs.AddResource(models.NewResource(rid, 5))
 
 	created, _ := qs.CreateNode("entity-1")
@@ -227,7 +227,7 @@ func TestNodesMetricsHandler_PrefersDBLogs_WhenAvailable(t *testing.T) {
 	n.Log = nil
 
 	// Provide DB logs for this node ID; handler should prefer these over in-memory logs.
-	store.logsByNode[nid] = []cmstore.NodeLogRow{
+	nodestore.logsByNode[nid] = []cmstore.NodeLogRow{
 		{NodeID: nid, Action: "moved_to_waiting_queue", ResourceID: &rid, TS: base.Add(1 * time.Second)},
 		{NodeID: nid, Action: "moved_to_service_queue", ResourceID: &rid, TS: base.Add(3 * time.Second)},
 		{NodeID: nid, Action: "completed", ResourceID: &rid, TS: base.Add(10 * time.Second)},
