@@ -17,7 +17,7 @@ import (
 // and starts the HTTP server.
 func main() {
 	// Optional DB connection (best-effort). If env vars are not set or DB is down, we run in-memory.
-	dbConn, err := db.OpenFromEnv()
+	dbConn, err := db.OpenFromEnv(getDBConfigFromEnv())
 	if err != nil {
 		log.Printf("[DB] disabled (failed to connect): %v", err)
 	}
@@ -66,5 +66,24 @@ func main() {
 
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatal("Server failed to start:", err)
+	}
+}
+
+func getDBConfigFromEnv() db.Config {
+	sslmode := os.Getenv("MAIN_DB_SSLMODE")
+	if sslmode == "" {
+		sslmode = "disable"
+	}
+	name := os.Getenv("MAIN_DB_NAME")
+	if name == "" {
+		name = "nodequeue"
+	}
+	return db.Config{
+		Host:     os.Getenv("MAIN_DB_HOST"),
+		Port:     os.Getenv("MAIN_DB_PORT"),
+		Name:     name,
+		User:     os.Getenv("MAIN_DB_USER"),
+		Password: os.Getenv("MAIN_DB_PASSWORD"),
+		SSLMode:  sslmode,
 	}
 }

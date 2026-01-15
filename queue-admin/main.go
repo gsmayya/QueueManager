@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	dbConn, err := db.OpenFromEnv()
+	dbConn, err := db.OpenFromEnv(getDBConfigFromEnv())
 	if err != nil {
 		log.Fatalf("[DB] failed to connect: %v", err)
 	}
@@ -21,7 +21,7 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	nodequeueConn, err := db.OpenNodequeueFromEnv()
+	nodequeueConn, err := db.OpenFromEnv(getNodeQueueConfigFromEnv())
 	if err != nil {
 		log.Fatalf("[DB] failed to connect to nodequeue db: %v", err)
 	}
@@ -65,5 +65,43 @@ func main() {
 
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatal("Server failed to start:", err)
+	}
+}
+
+func getDBConfigFromEnv() db.Config {
+	sslmode := os.Getenv("MAIN_DB_SSLMODE")
+	if sslmode == "" {
+		sslmode = "disable"
+	}
+	name := os.Getenv("MAIN_DB_NAME")
+	if name == "" {
+		name = "master_db"
+	}
+	return db.Config{
+		Host:     os.Getenv("MAIN_DB_HOST"),
+		Port:     os.Getenv("MAIN_DB_PORT"),
+		Name:     name,
+		User:     os.Getenv("MAIN_DB_USER"),
+		Password: os.Getenv("MAIN_DB_PASSWORD"),
+		SSLMode:  sslmode,
+	}
+}
+
+func getNodeQueueConfigFromEnv() db.Config {
+	sslmode := os.Getenv("NODEQUEUE_DB_SSLMODE")
+	if sslmode == "" {
+		sslmode = "disable"
+	}
+	name := os.Getenv("NODEQUEUE_DB_NAME")
+	if name == "" {
+		name = "nodequeue"
+	}
+	return db.Config{
+		Host:     os.Getenv("NODEQUEUE_DB_HOST"),
+		Port:     os.Getenv("NODEQUEUE_DB_PORT"),
+		Name:     name,
+		User:     os.Getenv("NODEQUEUE_DB_USER"),
+		Password: os.Getenv("NODEQUEUE_DB_PASSWORD"),
+		SSLMode:  sslmode,
 	}
 }
