@@ -23,20 +23,20 @@ type Config struct {
 }
 
 func ConfigFromEnv() Config {
-	sslmode := os.Getenv("MASTER_DB_SSLMODE")
+	sslmode := os.Getenv("MAIN_DB_SSLMODE")
 	if sslmode == "" {
 		sslmode = "disable"
 	}
-	name := os.Getenv("MASTER_DB_NAME")
+	name := os.Getenv("MAIN_DB_NAME")
 	if name == "" {
 		name = "master_db"
 	}
 	return Config{
-		Host:     os.Getenv("MASTER_DB_HOST"),
-		Port:     os.Getenv("MASTER_DB_PORT"),
+		Host:     os.Getenv("MAIN_DB_HOST"),
+		Port:     os.Getenv("MAIN_DB_PORT"),
 		Name:     name,
-		User:     os.Getenv("MASTER_DB_USER"),
-		Password: os.Getenv("MASTER_DB_PASSWORD"),
+		User:     os.Getenv("MAIN_DB_USER"),
+		Password: os.Getenv("MAIN_DB_PASSWORD"),
 		SSLMode:  sslmode,
 	}
 }
@@ -142,12 +142,12 @@ func ensureDatabaseExists(ctx context.Context, cfg Config) error {
 func OpenNodequeueFromEnv() (*sql.DB, error) {
 	// Temporarily map NODEQUEUE_DB_* into the expected MASTER_DB_* slots by constructing a Config.
 	cfg := Config{
-		Host:     firstNonEmpty(os.Getenv("NODEQUEUE_DB_HOST"), os.Getenv("MASTER_DB_HOST")),
-		Port:     firstNonEmpty(os.Getenv("NODEQUEUE_DB_PORT"), os.Getenv("MASTER_DB_PORT")),
+		Host:     firstNonEmpty(os.Getenv("NODEQUEUE_DB_HOST"), os.Getenv("MAIN_DB_HOST")),
+		Port:     firstNonEmpty(os.Getenv("NODEQUEUE_DB_PORT"), os.Getenv("MAIN_DB_PORT")),
 		Name:     firstNonEmpty(os.Getenv("NODEQUEUE_DB_NAME"), "nodequeue"),
-		User:     firstNonEmpty(os.Getenv("NODEQUEUE_DB_USER"), os.Getenv("MASTER_DB_USER")),
-		Password: firstNonEmpty(os.Getenv("NODEQUEUE_DB_PASSWORD"), os.Getenv("MASTER_DB_PASSWORD")),
-		SSLMode:  firstNonEmpty(os.Getenv("NODEQUEUE_DB_SSLMODE"), os.Getenv("MASTER_DB_SSLMODE"), "disable"),
+		User:     firstNonEmpty(os.Getenv("NODEQUEUE_DB_USER"), os.Getenv("MAIN_DB_USER")),
+		Password: firstNonEmpty(os.Getenv("NODEQUEUE_DB_PASSWORD"), os.Getenv("MAIN_DB_PASSWORD")),
+		SSLMode:  firstNonEmpty(os.Getenv("NODEQUEUE_DB_SSLMODE"), os.Getenv("MAIN_DB_SSLMODE"), "disable"),
 	}
 	if !cfg.Enabled() {
 		return nil, nil

@@ -1,10 +1,6 @@
 package models
 
 import (
-	"encoding/csv"
-	"io"
-	"os"
-	"strconv"
 	"sync"
 )
 
@@ -159,53 +155,4 @@ func (r *Resource) IsFull() bool {
 type resourceConfig struct {
 	id       string
 	capacity int
-}
-
-// loadResources attempts to read resource definitions from a CSV file.
-// If the file does not exist (or yields no valid rows), it falls back to defaults.
-//
-// Expected CSV format: id,capacity (with an optional header row like "Name,Capacity").
-func loadResources(fileName string) []resourceConfig {
-	resources := make([]resourceConfig, 0)
-
-	configFile, err := os.Open(fileName)
-	if err == nil {
-		defer configFile.Close()
-		reader := csv.NewReader(configFile)
-		for {
-			record, err := reader.Read()
-			if err == io.EOF {
-				break
-			}
-			if err != nil || len(record) < 2 || record[0] == "Name" {
-				continue // skip malformed lines and header
-			}
-			cap, err := strconv.Atoi(record[1])
-			if err != nil {
-				continue // skip if capacity field is not integer
-			}
-			resources = append(resources, resourceConfig{id: record[0], capacity: cap})
-		}
-	}
-
-	// If file is missing OR produced no valid resources, use defaults.
-	if len(resources) == 0 {
-		resources = []resourceConfig{
-			{id: "Room 1", capacity: 5},
-			{id: "Room 2", capacity: 3},
-			{id: "Room 3", capacity: 4},
-		}
-	}
-	return resources
-}
-
-// LoadResources returns initialized Resource instances based on a CSV config file,
-// falling back to built-in defaults when the file is missing or empty.
-func LoadResources(fileName string) []*Resource {
-	cfgs := loadResources(fileName)
-	out := make([]*Resource, 0, len(cfgs))
-	for _, c := range cfgs {
-		out = append(out, NewResource(c.id, c.capacity))
-	}
-	return out
 }

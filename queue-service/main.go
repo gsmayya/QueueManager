@@ -34,7 +34,7 @@ func main() {
 	queueService := queueservice.NewQueueServiceWithStore(store)
 
 	// Load resources from config (or fall back to defaults).
-	resources := setupResources("config.txt", queueService, store)
+	resources := setupResources(queueService, store)
 	log.Printf("Initialized %d resources", len(resources))
 
 	// Restore nodes + queue membership from DB (best-effort).

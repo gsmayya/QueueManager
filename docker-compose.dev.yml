@@ -17,11 +17,11 @@ services:
     environment:
       - PORT=8080
       - CGO_ENABLED=0
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=nodequeue
-      - DB_USER=nodequeue
-      - DB_PASSWORD=nodequeue
+      - MAIN_DB_HOST=db
+      - MAIN_DB_PORT=5432
+      - MAIN_DB_NAME=nodequeue
+      - MAIN_DB_USER=nodequeue
+      - MAIN_DB_PASSWORD=nodequeue
       - MASTER_SERVICE_URL=http://queue-admin:8081
     volumes:
       - ./queue-service:/app/queue-service
@@ -40,12 +40,12 @@ services:
     environment:
       - PORT=8081
       - CGO_ENABLED=0
-      - MASTER_DB_HOST=db
-      - MASTER_DB_PORT=5432
-      - MASTER_DB_NAME=master_db
-      - MASTER_DB_USER=nodequeue
-      - MASTER_DB_PASSWORD=nodequeue
-      - MASTER_DB_SSLMODE=disable
+      - MAIN_DB_HOST=db
+      - MAIN_DB_PORT=5432
+      - MAIN_DB_NAME=master_db
+      - MAIN_DB_USER=nodequeue
+      - MAIN_DB_PASSWORD=nodequeue
+      - MAIN_DB_SSLMODE=disable
       - NODEQUEUE_DB_HOST=db
       - NODEQUEUE_DB_PORT=5432
       - NODEQUEUE_DB_NAME=nodequeue

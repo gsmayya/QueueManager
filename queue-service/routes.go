@@ -85,7 +85,7 @@ func setupRoutes(qs *queueservice.QueueService) {
 	http.HandleFunc("/resources", corsMiddleware(qs.ListResourcesHandler))
 }
 
-func setupResources(fileName string, queueService *queueservice.QueueService, store qsstore.Store) []*models.Resource {
+func setupResources(queueService *queueservice.QueueService, store qsstore.Store) []*models.Resource {
 	// Prefer DB resources when available, but fall back to local defaults if DB isn't configured/reachable.
 	if store != nil {
 		if dbResources, err := store.ListResources(context.Background()); err == nil && len(dbResources) > 0 {
@@ -98,13 +98,7 @@ func setupResources(fileName string, queueService *queueservice.QueueService, st
 			log.Printf("[DB] load resources failed, falling back to defaults: %v", err)
 		}
 	}
-
-	resources := models.LoadResources(fileName)
-	for _, r := range resources {
-		queueService.AddResource(r)
-		log.Printf("Initialized resource %s with capacity %d", r.ID, r.Capacity)
-	}
-	return resources
+	return nil
 }
 
 // corsMiddleware wraps a handler with permissive CORS headers for browser-based clients.
