@@ -75,7 +75,7 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 			evs = toNodeEventsFromInMemory(memLogs[id])
 		}
 
-		m := computeNodeMetrics(now, snap, evs)
+		m := qs.computeNodeMetrics(now, snap, evs)
 		if snap.Completed {
 			completed = append(completed, m)
 		} else {
@@ -154,7 +154,7 @@ func toNodeEventsFromDB(rows []store.NodeLogRow) []nodeEvent {
 	return out
 }
 
-func computeNodeMetrics(now time.Time, n nodeSnapshot, events []nodeEvent) NodeMetrics {
+func (qs *QueueService) computeNodeMetrics(now time.Time, n nodeSnapshot, events []nodeEvent) NodeMetrics {
 	// Sort to make computation deterministic even if logs are appended out-of-order.
 	slices.SortStableFunc(events, func(a, b nodeEvent) int {
 		if a.TS.Before(b.TS) {
@@ -188,9 +188,15 @@ func computeNodeMetrics(now time.Time, n nodeSnapshot, events []nodeEvent) NodeM
 		case "moved_to_waiting_queue":
 			// If we were already waiting somewhere, treat this as leaving that wait state.
 			closeOpen(ev.TS)
+			res, err := qs.GetResource(ev.ResourceID)
+			if err != nil {
+				log.Printf("[DB] GetResource failed: %v", err)
+				continue
+			}
 			segments = append(segments, WaitingSegment{
-				ResourceID: ev.ResourceID,
-				StartTS:    ev.TS,
+				ResourceID:   ev.ResourceID,
+				ResourceName: res.Name,
+				StartTS:      ev.TS,
 			})
 			openIdx = len(segments) - 1
 

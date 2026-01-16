@@ -106,7 +106,7 @@ func (qs *QueueService) ResourcesMetricsHandler(w http.ResponseWriter, r *http.R
 		sessionStart = earliestTS
 	}
 
-	resp := computeResourcesSessionMetrics(sessionStart, now, resourceCounts, snaps, logsByNode)
+	resp := qs.computeResourcesSessionMetrics(sessionStart, now, resourceCounts, snaps, logsByNode)
 
 	duration := time.Since(startTime)
 	log.Printf("[API] GET /resources/metrics - SUCCESS: Returning %d resources (took %v)", len(resp.Resources), duration)
@@ -178,7 +178,7 @@ type resourceAgg struct {
 // - TotalAllocated: counts moved_to_service_queue events per resource
 // - AvgWaitingTimeMS: average over waiting segments for that resource (open segments closed at now)
 // - AvgServiceTimeMS: average over service segments for that resource (open segments closed at now)
-func computeResourcesSessionMetrics(
+func (qs *QueueService) computeResourcesSessionMetrics(
 	sessionStart time.Time,
 	now time.Time,
 	resourceCounts map[string][2]int, // rid -> [waiting, allocated]
@@ -191,9 +191,18 @@ func computeResourcesSessionMetrics(
 		if a, ok := aggs[rid]; ok {
 			return a
 		}
+
+		res, err := qs.GetResource(rid)
+		if err != nil {
+			log.Printf("[DB] GetResource failed: %v", err)
+			return nil
+		}
+
 		a := &resourceAgg{
 			m: ResourceSessionMetrics{
-				ResourceID: rid,
+				ResourceID:       rid,
+				ResourceName:     res.Name,
+				ResourceCapacity: res.Capacity,
 			},
 		}
 		if c, ok := resourceCounts[rid]; ok {
@@ -232,7 +241,7 @@ func computeResourcesSessionMetrics(
 		}
 
 		// Aggregate waiting durations from computed waiting segments.
-		waiting := computeNodeMetrics(now, nodes[nid], evs).WaitingSegments
+		waiting := qs.computeNodeMetrics(now, nodes[nid], evs).WaitingSegments
 		for _, seg := range waiting {
 			if seg.ResourceID == "" {
 				continue

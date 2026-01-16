@@ -55,6 +55,7 @@ export function ResourceMetricsFrame({
             <thead className="bg-zinc-50 text-xs font-semibold tracking-widest text-zinc-500">
               <tr>
                 <th className="px-4 py-3">RESOURCE</th>
+                <th className="px-4 py-3">CAPACITY</th>
                 <th className="px-4 py-3">WAITING</th>
                 <th className="px-4 py-3">ALLOCATED</th>
                 <th className="px-4 py-3">ADDED</th>
@@ -66,7 +67,8 @@ export function ResourceMetricsFrame({
             <tbody className="divide-y divide-zinc-200">
               {sorted.map((r) => (
                 <tr key={r.resource_id} className="hover:bg-zinc-50">
-                  <td className="px-4 py-3 font-semibold text-zinc-900">{r.resource_id}</td>
+                  <td className="px-4 py-3 font-semibold text-zinc-900">{r.resource_name}</td>
+                  <td className="px-4 py-3 font-semibold text-zinc-900">{r.resource_capacity}</td>
                   <td className="px-4 py-3 text-zinc-700">{r.current_waiting ?? 0}</td>
                   <td className="px-4 py-3 text-zinc-700">{r.current_allocated ?? 0}</td>
                   <td className="px-4 py-3 text-zinc-700">{r.total_added ?? 0}</td>

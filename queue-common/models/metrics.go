@@ -14,7 +14,9 @@ type ServiceSegment struct {
 
 // ResourceSessionMetrics represents session-only (in-memory) metrics for a single resource.
 type ResourceSessionMetrics struct {
-	ResourceID string `json:"resource_id"`
+	ResourceID       string `json:"resource_id"`
+	ResourceName     string `json:"resource_name"`
+	ResourceCapacity int    `json:"resource_capacity"`
 
 	// TotalAdded counts how many times nodes were moved/assigned into this resource's waiting queue.
 	// This counts revisits (i.e., total assignments), not unique node IDs.
@@ -49,10 +51,11 @@ type ResourcesSessionMetricsResponse struct {
 // It starts when the node is moved into that resource's waiting queue and ends when it is
 // allocated into that resource's service queue (or when it is moved away / completed).
 type WaitingSegment struct {
-	ResourceID string    `json:"resource_id"`
-	StartTS    time.Time `json:"start_ts"`
-	EndTS      time.Time `json:"end_ts"`
-	DurationMS int64     `json:"duration_ms"`
+	ResourceID   string    `json:"resource_id"`
+	ResourceName string    `json:"resource_name"`
+	StartTS      time.Time `json:"start_ts"`
+	EndTS        time.Time `json:"end_ts"`
+	DurationMS   int64     `json:"duration_ms"`
 }
 
 // NodeMetrics is a computed view over a node's lifecycle.

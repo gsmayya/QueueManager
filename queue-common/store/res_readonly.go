@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"queue-common/models"
 )
 
@@ -37,4 +38,17 @@ func (s *ResStoreImpl) ListResources(ctx context.Context) ([]*models.Resource, e
 		return nil, err
 	}
 	return out, nil
+}
+
+func (s *ResStoreImpl) GetResource(ctx context.Context, id string) (*models.Resource, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT id, name, capacity FROM resources WHERE id = ? AND deleted_at IS NULL`, id)
+	var name string
+	var cap int
+	if err := row.Scan(&id, &name, &cap); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return models.NewResource(id, cap), nil
 }

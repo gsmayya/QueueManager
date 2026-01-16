@@ -97,9 +97,9 @@ export function NodeMetricsFrame({
                             <div
                               key={`${n.id}-${idx}`}
                               className="rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-800"
-                              title={`${seg.resource_id}: ${seg.start_ts} → ${seg.end_ts}`}
+                              title={`${seg.resource_name}: ${seg.start_ts} → ${seg.end_ts}`}
                             >
-                              {seg.resource_id}: {formatDuration(seg.duration_ms)}
+                              {seg.resource_name}: {formatDuration(seg.duration_ms)}
                             </div>
                           ))}
                         </div>

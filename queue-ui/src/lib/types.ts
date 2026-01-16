@@ -35,6 +35,7 @@ export type ErrorResponse = {
 
 export type WaitingSegment = {
   resource_id: string;
+  resource_name: string;
   start_ts: string;
   end_ts: string;
   duration_ms: number;
@@ -56,6 +57,8 @@ export type NodesMetricsResponse = {
 
 export type ResourceSessionMetrics = {
   resource_id: string;
+  resource_name: string;
+  resource_capacity: number;
   total_added: number;
   total_allocated: number;
   current_waiting: number;

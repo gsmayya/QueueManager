@@ -62,7 +62,7 @@ export function MetricsPage() {
     <div className="mx-auto max-w-6xl">
       <header className="mb-6 text-center text-white">
         <h1 className="text-3xl font-semibold tracking-tight">Metrics</h1>
-        <p className="mt-2 text-white/80">Room + node metrics (refreshes every 10s).</p>
+        <p className="mt-2 text-white/80">Room + Node metrics (refreshes every 10s).</p>
       </header>
 
       <ResourceMetricsFrame

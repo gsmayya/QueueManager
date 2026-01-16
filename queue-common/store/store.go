@@ -87,6 +87,7 @@ func isUniqueViolation(err error) bool {
 // Implementations should be safe for best-effort writes (callers may ignore errors to keep API behavior stable).
 type ResStore interface {
 	ListResources(ctx context.Context) ([]*models.Resource, error)
+	GetResource(ctx context.Context, id string) (*models.Resource, error)
 }
 
 type NodeStore interface {
