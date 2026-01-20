@@ -1,11 +1,11 @@
 package queueservice
 
 import (
-	"log"
 	"net/http"
 	"slices"
 	"time"
 
+	"queue-common/logging"
 	. "queue-common/models"
 	"queue-common/store"
 	"queue-common/utils"
@@ -25,7 +25,7 @@ func (qs *QueueService) ResourcesMetricsHandler(w http.ResponseWriter, r *http.R
 
 	startTime := time.Now()
 	now := time.Now()
-	log.Printf("[API] GET /resources/metrics - Request")
+	logging.Debugf("GET /resources/metrics request")
 
 	qs.mu.RLock()
 	// Snapshot current resource queue sizes.
@@ -69,7 +69,7 @@ func (qs *QueueService) ResourcesMetricsHandler(w http.ResponseWriter, r *http.R
 		var err error
 		dbLogs, err = qs.nodestore.ListNodeLogs(r.Context(), nodeIDs)
 		if err != nil {
-			log.Printf("[DB] ListNodeLogs failed (falling back to in-memory logs): %v", err)
+			logging.Debugf("[DB] ListNodeLogs failed (falling back to in-memory logs): %v", err)
 			dbLogs = nil
 		}
 	}
@@ -109,7 +109,7 @@ func (qs *QueueService) ResourcesMetricsHandler(w http.ResponseWriter, r *http.R
 	resp := qs.computeResourcesSessionMetrics(sessionStart, now, resourceCounts, snaps, logsByNode)
 
 	duration := time.Since(startTime)
-	log.Printf("[API] GET /resources/metrics - SUCCESS: Returning %d resources (took %v)", len(resp.Resources), duration)
+	logging.Debugf("GET /resources/metrics success resources=%d took=%v", len(resp.Resources), duration)
 	utils.RespondWithJSON(w, http.StatusOK, resp)
 }
 
@@ -194,7 +194,7 @@ func (qs *QueueService) computeResourcesSessionMetrics(
 
 		res, err := qs.GetResource(rid)
 		if err != nil {
-			log.Printf("[DB] GetResource failed: %v", err)
+			logging.Debugf("[DB] GetResource failed: %v", err)
 			return nil
 		}
 

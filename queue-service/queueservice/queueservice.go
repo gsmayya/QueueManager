@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 
 	"sort"
@@ -12,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"queue-common/logging"
 	"queue-common/models"
 	"queue-common/store"
 	"queue-common/utils"
@@ -59,7 +59,8 @@ func (qs *QueueService) bestEffortPersist(ctx context.Context, op string, fn fun
 		return
 	}
 	if err := fn(ctx); err != nil {
-		log.Printf("[DB] %s failed: %v", op, err)
+		// Keep DB noise out of default logs; opt-in via LOG_LEVEL=debug.
+		logging.Debugf("[DB] %s failed: %v", op, err)
 	}
 }
 
@@ -86,6 +87,8 @@ func (qs *QueueService) CreateNode(entityName string) (*models.Node, error) {
 	node.AddLog("created", "")
 
 	qs.nodes[node.ID] = node
+
+	logging.Infof("node_created node_id=%s entity_id=%s entity_name=%q node_name=%q", node.ID, entityID, entityName, node.NodeName)
 
 	// Persist audit trail (best-effort).
 	ctx := context.Background()
@@ -116,6 +119,8 @@ func (qs *QueueService) CreateNodeForEntity(entityID, entityName, nodeName strin
 	}
 	n.AddLog("created", "")
 	qs.nodes[n.ID] = n
+
+	logging.Infof("node_created node_id=%s entity_id=%s entity_name=%q node_name=%q", n.ID, entityID, entityName, nodeName)
 
 	// Persist audit trail (best-effort) using the master entity ID for nodequeue's entities table too.
 	ctx := context.Background()
@@ -149,6 +154,8 @@ func (qs *QueueService) MoveNode(nodeID, targetResourceID string) error {
 		return errors.New("cannot move completed node")
 	}
 
+	fromResourceID := node.ResourceID
+
 	targetResource, exists := qs.resources[targetResourceID]
 	if !exists {
 		return errors.New("target resource not found")
@@ -162,8 +169,15 @@ func (qs *QueueService) MoveNode(nodeID, targetResourceID string) error {
 	}
 
 	// Assign to target resource (always goes to waiting queue)
+	beforeWaiting, beforeService := targetResource.QueueCounts()
 	targetResource.AddNode(node)
+	afterWaiting, afterService := targetResource.QueueCounts()
 	node.AddLog("moved_to_waiting_queue", targetResourceID)
+
+	logging.Infof(
+		"node_moved_to_waiting node_id=%s from_resource=%q to_resource=%q waiting=%d->%d service=%d->%d",
+		nodeID, fromResourceID, targetResourceID, beforeWaiting, afterWaiting, beforeService, afterService,
+	)
 
 	// Persist audit trail (best-effort).
 	ctx := context.Background()
@@ -208,6 +222,8 @@ func (qs *QueueService) AllocateNode(nodeID string) error {
 		return errors.New("resource not found")
 	}
 
+	beforeWaiting, beforeService := resource.QueueCounts()
+
 	// Ensure node is currently in the waiting queue, and enforce capacity on promotion to service
 	if resource.IsInService(nodeID) {
 		return errors.New("node is already in service queue")
@@ -221,7 +237,13 @@ func (qs *QueueService) AllocateNode(nodeID string) error {
 		return errors.New("node is not in waiting queue")
 	}
 
+	afterWaiting, afterService := resource.QueueCounts()
 	node.AddLog("moved_to_service_queue", node.ResourceID)
+
+	logging.Infof(
+		"node_allocated_to_service node_id=%s resource=%q waiting=%d->%d service=%d->%d",
+		nodeID, node.ResourceID, beforeWaiting, afterWaiting, beforeService, afterService,
+	)
 
 	// Persist audit trail (best-effort).
 	ctx := context.Background()
@@ -247,6 +269,8 @@ func (qs *QueueService) CompleteNode(nodeID string) error {
 		return errors.New("node is already completed")
 	}
 
+	prevResourceID := node.ResourceID
+
 	node.Completed = true
 	node.AddLog("completed", node.ResourceID)
 
@@ -267,6 +291,7 @@ func (qs *QueueService) CompleteNode(nodeID string) error {
 		node.ResourceID = ""
 	}
 
+	logging.Infof("node_completed node_id=%s prev_resource=%q", nodeID, prevResourceID)
 	return nil
 }
 
@@ -437,7 +462,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 
 	var req models.CreateNodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("[API] POST /nodes - ERROR: Invalid request body - %v", err)
+		logging.Debugf("POST /nodes invalid_json err=%v", err)
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
@@ -452,7 +477,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 	// New flow: entity_id + node_name (4 digits).
 	if req.EntityID != "" {
 		if req.NodeName == "" {
-			log.Printf("[API] POST /nodes - ERROR: node_name is required when entity_id is provided")
+			logging.Debugf("POST /nodes validation_failed reason=node_name_required entity_id=%s", req.EntityID)
 			utils.RespondWithError(w, http.StatusBadRequest, "node_name is required when entity_id is provided")
 			return
 		}
@@ -468,34 +493,30 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 		}
 		ent, ferr := fetchMasterEntityByID(r.Context(), req.EntityID)
 		if ferr != nil {
-			log.Printf("[API] POST /nodes - ERROR: invalid entity_id (master-service): %v", ferr)
+			logging.Debugf("POST /nodes validation_failed reason=invalid_entity_id entity_id=%s err=%v", req.EntityID, ferr)
 			utils.RespondWithError(w, http.StatusBadRequest, "invalid entity_id")
 			return
 		}
-
-		log.Printf("[API] POST /nodes - Request: entity_id=%s, node_name=%s, resource_id=%s", req.EntityID, req.NodeName, req.ResourceID)
 		created, err = qs.CreateNodeForEntity(req.EntityID, ent.Name, req.NodeName)
 	} else {
 		// Legacy flow: entity_name required.
 		if req.EntityName == "" {
-			log.Printf("[API] POST /nodes - ERROR: entity_name is required")
+			logging.Debugf("POST /nodes validation_failed reason=entity_name_required")
 			utils.RespondWithError(w, http.StatusBadRequest, "entity_name is required")
 			return
 		}
-		log.Printf("[API] POST /nodes - Request: entity_name=%s, resource_id=%s", req.EntityName, req.ResourceID)
 		created, err = qs.CreateNode(req.EntityName)
 	}
 	if err != nil {
-		log.Printf("[API] POST /nodes - ERROR: %v", err)
+		logging.Errorf("POST /nodes failed err=%v", err)
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// If resource_id is provided, add node to that resource
 	if req.ResourceID != "" {
-		log.Printf("[API] POST /nodes - Moving node %s to resource %s", created.ID, req.ResourceID)
 		if err := qs.MoveNode(created.ID, req.ResourceID); err != nil {
-			log.Printf("[API] POST /nodes - ERROR moving node: %v", err)
+			logging.Errorf("POST /nodes move_failed node_id=%s target_resource=%s err=%v", created.ID, req.ResourceID, err)
 			// If move fails, still return the created node
 			utils.RespondWithJSON(w, http.StatusCreated, created)
 			return
@@ -505,7 +526,7 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("[API] POST /nodes - SUCCESS: Created node %s (took %v)", created.ID, duration)
+	logging.Debugf("POST /nodes success node_id=%s took=%v", created.ID, duration)
 	utils.RespondWithJSON(w, http.StatusCreated, created)
 }
 
@@ -515,34 +536,32 @@ func (qs *QueueService) CreateNodeHandler(w http.ResponseWriter, r *http.Request
 // It does not allocate the node into service; use POST /nodes/{id}/allocate for that.
 func (qs *QueueService) MoveNodeHandler(w http.ResponseWriter, r *http.Request, nodeID string) {
 	startTime := time.Now()
-	log.Printf("[API] POST /nodes/%s/move - Request", nodeID)
 
 	var req models.MoveNodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("[API] POST /nodes/%s/move - ERROR: Invalid request body - %v", nodeID, err)
+		logging.Debugf("POST /nodes/%s/move invalid_json err=%v", nodeID, err)
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.TargetResourceID == "" {
-		log.Printf("[API] POST /nodes/%s/move - ERROR: target_resource_id is required", nodeID)
+		logging.Debugf("POST /nodes/%s/move validation_failed reason=target_resource_required", nodeID)
 		utils.RespondWithError(w, http.StatusBadRequest, "target_resource_id is required")
 		return
 	}
 
-	log.Printf("[API] POST /nodes/%s/move - Moving to resource %s", nodeID, req.TargetResourceID)
 	if err := qs.MoveNode(nodeID, req.TargetResourceID); err != nil {
 		statusCode := http.StatusBadRequest
 		if err.Error() == "node not found" || err.Error() == "target resource not found" {
 			statusCode = http.StatusNotFound
 		}
-		log.Printf("[API] POST /nodes/%s/move - ERROR: %v", nodeID, err)
+		logging.Errorf("POST /nodes/%s/move failed target_resource=%s err=%v", nodeID, req.TargetResourceID, err)
 		utils.RespondWithError(w, statusCode, err.Error())
 		return
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("[API] POST /nodes/%s/move - SUCCESS: Moved to resource %s (took %v)", nodeID, req.TargetResourceID, duration)
+	logging.Debugf("POST /nodes/%s/move success target_resource=%s took=%v", nodeID, req.TargetResourceID, duration)
 	node, _ := qs.GetNode(nodeID)
 	utils.RespondWithJSON(w, http.StatusOK, node)
 }
@@ -552,20 +571,19 @@ func (qs *QueueService) MoveNodeHandler(w http.ResponseWriter, r *http.Request, 
 // Completion marks a node immutable (no further moves/allocations) and removes it from any queues.
 func (qs *QueueService) CompleteNodeHandler(w http.ResponseWriter, r *http.Request, nodeID string) {
 	startTime := time.Now()
-	log.Printf("[API] POST /nodes/%s/complete - Request", nodeID)
 
 	if err := qs.CompleteNode(nodeID); err != nil {
 		statusCode := http.StatusBadRequest
 		if err.Error() == "node not found" {
 			statusCode = http.StatusNotFound
 		}
-		log.Printf("[API] POST /nodes/%s/complete - ERROR: %v", nodeID, err)
+		logging.Errorf("POST /nodes/%s/complete failed err=%v", nodeID, err)
 		utils.RespondWithError(w, statusCode, err.Error())
 		return
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("[API] POST /nodes/%s/complete - SUCCESS: Node completed (took %v)", nodeID, duration)
+	logging.Debugf("POST /nodes/%s/complete success took=%v", nodeID, duration)
 	node, _ := qs.GetNode(nodeID)
 	utils.RespondWithJSON(w, http.StatusOK, node)
 }
@@ -576,20 +594,19 @@ func (qs *QueueService) CompleteNodeHandler(w http.ResponseWriter, r *http.Reque
 // This is the step where resource capacity is enforced.
 func (qs *QueueService) AllocateNodeHandler(w http.ResponseWriter, r *http.Request, nodeID string) {
 	startTime := time.Now()
-	log.Printf("[API] POST /nodes/%s/allocate - Request", nodeID)
 
 	if err := qs.AllocateNode(nodeID); err != nil {
 		statusCode := http.StatusBadRequest
 		if err.Error() == "node not found" || err.Error() == "resource not found" {
 			statusCode = http.StatusNotFound
 		}
-		log.Printf("[API] POST /nodes/%s/allocate - ERROR: %v", nodeID, err)
+		logging.Errorf("POST /nodes/%s/allocate failed err=%v", nodeID, err)
 		utils.RespondWithError(w, statusCode, err.Error())
 		return
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("[API] POST /nodes/%s/allocate - SUCCESS: Node allocated (took %v)", nodeID, duration)
+	logging.Debugf("POST /nodes/%s/allocate success took=%v", nodeID, duration)
 	node, _ := qs.GetNode(nodeID)
 	utils.RespondWithJSON(w, http.StatusOK, node)
 }
@@ -597,14 +614,13 @@ func (qs *QueueService) AllocateNodeHandler(w http.ResponseWriter, r *http.Reque
 // GetNodeHandler handles GET /nodes/{id}.
 // Returns 404 if the node does not exist.
 func (qs *QueueService) GetNodeHandler(w http.ResponseWriter, r *http.Request, nodeID string) {
-	log.Printf("[API] GET /nodes/%s - Request", nodeID)
 	node, err := qs.GetNode(nodeID)
 	if err != nil {
-		log.Printf("[API] GET /nodes/%s - ERROR: %v", nodeID, err)
+		logging.Debugf("GET /nodes/%s not_found err=%v", nodeID, err)
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	log.Printf("[API] GET /nodes/%s - SUCCESS", nodeID)
+	logging.Debugf("GET /nodes/%s success", nodeID)
 	utils.RespondWithJSON(w, http.StatusOK, node)
 }
 
@@ -615,9 +631,8 @@ func (qs *QueueService) ListNodesHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	log.Printf("[API] GET /nodes - Request")
 	nodes := qs.ListNodes()
-	log.Printf("[API] GET /nodes - SUCCESS: Returning %d nodes", len(nodes))
+	logging.Debugf("GET /nodes success count=%d", len(nodes))
 	utils.RespondWithJSON(w, http.StatusOK, nodes)
 }
 
@@ -628,8 +643,7 @@ func (qs *QueueService) ListResourcesHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	log.Printf("[API] GET /resources - Request")
 	resources := qs.ListResources()
-	log.Printf("[API] GET /resources - SUCCESS: Returning %d resources", len(resources))
+	logging.Debugf("GET /resources success count=%d", len(resources))
 	utils.RespondWithJSON(w, http.StatusOK, resources)
 }

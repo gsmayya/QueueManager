@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"queue-common/models"
 	"strings"
 
+	"queue-common/logging"
 	"queue-common/store"
 	"queue-service/queueservice"
 )
@@ -91,11 +91,11 @@ func setupResources(queueService *queueservice.QueueService, nodestore store.Nod
 		if dbResources, err := resourcestore.ListResources(context.Background()); err == nil && len(dbResources) > 0 {
 			for _, r := range dbResources {
 				queueService.AddResource(r)
-				log.Printf("Initialized resource %s with capacity %d (from DB)", r.ID, r.Capacity)
+				logging.Infof("resource_initialized resource_id=%s capacity=%d source=db", r.ID, r.Capacity)
 			}
 			return dbResources
 		} else if err != nil {
-			log.Printf("[DB] load resources failed, falling back to defaults: %v", err)
+			logging.Debugf("[DB] load resources failed, falling back to defaults: %v", err)
 		}
 	}
 	return nil

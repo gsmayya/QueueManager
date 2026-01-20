@@ -50,31 +50,75 @@ export function ResourceMetricsFrame({
       ) : sorted.length === 0 ? (
         <div className="text-sm text-zinc-600">No resources.</div>
       ) : (
-        <div className="overflow-auto rounded-lg border border-zinc-200">
-          <table className="min-w-[900px] w-full text-left text-sm">
-            <thead className="bg-zinc-50 text-xs font-semibold tracking-widest text-zinc-500">
+        <div className="rounded-lg border border-zinc-200">
+          <table className="w-full table-fixed text-left text-xs">
+            <colgroup>
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "10%" }} />
+              {/* Current (2) */}
+              <col style={{ width: "9.75%" }} />
+              <col style={{ width: "9.75%" }} />
+              {/* Total (4) */}
+              <col style={{ width: "9.75%" }} />
+              <col style={{ width: "9.75%" }} />
+              <col style={{ width: "9.75%" }} />
+              <col style={{ width: "9.75%" }} />
+              {/* Average (2) */}
+              <col style={{ width: "9.75%" }} />
+              <col style={{ width: "9.75%" }} />
+            </colgroup>
+
+            <thead className="text-[11px] font-semibold tracking-widest text-zinc-500">
               <tr>
-                <th className="px-4 py-3">RESOURCE</th>
-                <th className="px-4 py-3">CAPACITY</th>
-                <th className="px-4 py-3">WAITING</th>
-                <th className="px-4 py-3">ALLOCATED</th>
-                <th className="px-4 py-3">ADDED</th>
-                <th className="px-4 py-3">ALLOCATIONS</th>
-                <th className="px-4 py-3">AVG_WAIT</th>
-                <th className="px-4 py-3">AVG_SERVICE</th>
+                <th className="bg-zinc-50 px-2 py-2" rowSpan={2}>
+                  RESOURCE
+                </th>
+                <th className="bg-zinc-50 px-2 py-2" rowSpan={2}>
+                  CAPACITY
+                </th>
+                <th className="bg-emerald-50 px-2 py-2 text-center" colSpan={2}>
+                  CURRENT
+                </th>
+                <th className="bg-amber-50 px-2 py-2 text-center" colSpan={2}>
+                  AVERAGE
+                </th>
+                <th className="bg-sky-50 px-2 py-2 text-center" colSpan={4}>
+                  TOTAL
+                </th>
+                
+              </tr>
+              <tr className="text-[10px] [&_th]:px-2 [&_th]:pb-2 [&_th]:pt-0">
+                <th className="bg-emerald-50">Waiting</th>
+                <th className="bg-emerald-50">Allocated</th>
+                <th className="bg-amber-50">Wait time</th>
+                <th className="bg-amber-50">Service time</th>
+                <th className="bg-sky-50">Waiting</th>
+                <th className="bg-sky-50">Allocated</th>
+                <th className="bg-sky-50">Wait time</th>
+                <th className="bg-sky-50">Service time</th>                
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200">
               {sorted.map((r) => (
-                <tr key={r.resource_id} className="hover:bg-zinc-50">
-                  <td className="px-4 py-3 font-semibold text-zinc-900">{r.resource_name}</td>
-                  <td className="px-4 py-3 font-semibold text-zinc-900">{r.resource_capacity}</td>
-                  <td className="px-4 py-3 text-zinc-700">{r.current_waiting ?? 0}</td>
-                  <td className="px-4 py-3 text-zinc-700">{r.current_allocated ?? 0}</td>
-                  <td className="px-4 py-3 text-zinc-700">{r.total_added ?? 0}</td>
-                  <td className="px-4 py-3 text-zinc-700">{r.total_allocated ?? 0}</td>
-                  <td className="px-4 py-3 text-zinc-700">{formatDuration(r.avg_waiting_time_ms ?? 0)}</td>
-                  <td className="px-4 py-3 text-zinc-700">{formatDuration(r.avg_service_time_ms ?? 0)}</td>
+                <tr key={r.resource_id}>
+                  <td className="bg-white px-2 py-2 font-semibold text-zinc-900">{r.resource_name}</td>
+                  <td className="bg-white px-2 py-2 font-semibold text-zinc-900">{r.resource_capacity}</td>
+                  {/* Current */}
+                  <td className="bg-emerald-50 px-2 py-2 text-zinc-700">{r.current_waiting ?? 0}</td>
+                  <td className="bg-emerald-50 px-2 py-2 text-zinc-700">{r.current_allocated ?? 0}</td>
+
+
+                  {/* Average */}
+                  <td className="bg-amber-50 px-2 py-2 text-zinc-700">{formatDuration(r.avg_waiting_time_ms ?? 0)}</td>
+                  <td className="bg-amber-50 px-2 py-2 text-zinc-700">{formatDuration(r.avg_service_time_ms ?? 0)}</td>
+
+                  {/* Total */}
+                  <td className="bg-sky-50 px-2 py-2 text-zinc-700">{r.total_added ?? 0}</td>
+                  <td className="bg-sky-50 px-2 py-2 text-zinc-700">{r.total_allocated ?? 0}</td>
+                  <td className="bg-sky-50 px-2 py-2 text-zinc-700">{formatDuration(r.waiting_total_ms ?? 0)}</td>
+                  <td className="bg-sky-50 px-2 py-2 text-zinc-700">{formatDuration(r.service_total_ms ?? 0)}</td>
+
+                  
                 </tr>
               ))}
             </tbody>

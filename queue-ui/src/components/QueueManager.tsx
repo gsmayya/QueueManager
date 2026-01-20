@@ -14,12 +14,6 @@ import { NodeCard } from "./NodeCard";
 import { ResourceCard } from "./ResourceCard";
 import { Toast } from "./Toast";
 
-function getApiBaseUrl(): string {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
-  return base.replace(/\/+$/, "");
-}
-
-
 export function QueueManager() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -115,13 +109,7 @@ export function QueueManager() {
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-6 text-center text-white">
-        <h1 className="text-3xl font-semibold tracking-tight">Queue Manager Simulation</h1>
-        <p className="mt-2 text-white/80">
-          React + Next.js UI for NodeQueue. Server is running at           
-          <code className="rounded bg-white/10 px-1.5 py-0.5">
-          {getApiBaseUrl()}
-          </code>.
-        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Queue Manager UI</h1>        
         <nav className="mt-4 flex justify-center gap-3 text-sm">
           <Link
             href="/node"

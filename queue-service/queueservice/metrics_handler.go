@@ -1,11 +1,11 @@
 package queueservice
 
 import (
-	"log"
 	"net/http"
 	"slices"
 	"time"
 
+	"queue-common/logging"
 	. "queue-common/models"
 	"queue-common/store"
 	"queue-common/utils"
@@ -21,7 +21,7 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 
 	startTime := time.Now()
 	now := time.Now()
-	log.Printf("[API] GET /nodes/metrics - Request")
+	logging.Debugf("GET /nodes/metrics request")
 
 	qs.mu.RLock()
 	nodeIDs := make([]string, 0, len(qs.nodes))
@@ -34,6 +34,7 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 		}
 		snaps[id] = nodeSnapshot{
 			ID:        n.ID,
+			NodeName:  n.NodeName,
 			Entity:    entityName,
 			CreatedAt: n.CreatedAt,
 			Completed: n.Completed,
@@ -56,7 +57,7 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 		var err error
 		dbLogs, err = qs.nodestore.ListNodeLogs(r.Context(), nodeIDs)
 		if err != nil {
-			log.Printf("[DB] ListNodeLogs failed (falling back to in-memory logs): %v", err)
+			logging.Debugf("[DB] ListNodeLogs failed (falling back to in-memory logs): %v", err)
 			dbLogs = nil
 		}
 	}
@@ -109,7 +110,7 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("[API] GET /nodes/metrics - SUCCESS: Returning %d active, %d completed (took %v)", len(active), len(completed), duration)
+	logging.Debugf("GET /nodes/metrics success active=%d completed=%d took=%v", len(active), len(completed), duration)
 	utils.RespondWithJSON(w, http.StatusOK, resp)
 }
 
@@ -121,6 +122,7 @@ type nodeEvent struct {
 
 type nodeSnapshot struct {
 	ID        string
+	NodeName  string
 	Entity    string
 	CreatedAt time.Time
 	Completed bool
@@ -190,7 +192,7 @@ func (qs *QueueService) computeNodeMetrics(now time.Time, n nodeSnapshot, events
 			closeOpen(ev.TS)
 			res, err := qs.GetResource(ev.ResourceID)
 			if err != nil {
-				log.Printf("[DB] GetResource failed: %v", err)
+				logging.Debugf("[DB] GetResource failed: %v", err)
 				continue
 			}
 			segments = append(segments, WaitingSegment{
@@ -228,6 +230,7 @@ func (qs *QueueService) computeNodeMetrics(now time.Time, n nodeSnapshot, events
 	return NodeMetrics{
 		ID:                  n.ID,
 		EntityName:          n.Entity,
+		NodeName:            n.NodeName,
 		CreatedAt:           n.CreatedAt,
 		Completed:           n.Completed,
 		TotalTimeInSystemMS: total.Milliseconds(),

@@ -44,6 +44,7 @@ export type WaitingSegment = {
 export type NodeMetrics = {
   id: string;
   entity_name: string;
+  node_name?: string;
   created_at: string;
   completed: boolean;
   total_time_in_system_ms: number;

@@ -182,7 +182,7 @@ export function NodePage() {
                 Search
               </button>
             </div>
-            <div className="mt-2 text-xs text-zinc-500">Calls master-service: /entities?phone=…</div>
+            
           </div>
 
           <div className="md:col-span-1">

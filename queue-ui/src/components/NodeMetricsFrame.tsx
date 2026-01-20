@@ -5,6 +5,10 @@ import type { NodeMetrics, NodesMetricsResponse } from "../lib/types";
 
 const EMPTY_NODES: NodeMetrics[] = [];
 
+function displayNodeName(n: NodeMetrics): string {
+  return (n.node_name || "").trim() || (n.entity_name || "").trim() || n.id;
+}
+
 function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return "0s";
   const s = Math.floor(ms / 1000);
@@ -83,7 +87,9 @@ export function NodeMetricsFrame({
                     <div key={n.id} className="rounded-lg border border-zinc-200 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="font-semibold text-zinc-900">{n.entity_name}</div>
-                        <div className="text-xs text-zinc-500 font-mono">{n.id}</div>
+                        <div className="text-xs text-zinc-500 font-mono" title={n.id}>
+                          {displayNodeName(n)}
+                        </div>
                       </div>
                       <div className="mt-1 text-sm text-zinc-700">
                         Total: <span className="font-semibold">{formatDuration(n.total_time_in_system_ms)}</span>
@@ -120,7 +126,9 @@ export function NodeMetricsFrame({
                     <div key={n.id} className="rounded-lg border border-zinc-100 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="font-semibold text-zinc-900">{n.entity_name}</div>
-                        <div className="text-xs text-zinc-500 font-mono">{n.id}</div>
+                        <div className="text-xs text-zinc-500 font-mono" title={n.id}>
+                          {displayNodeName(n)}
+                        </div>
                       </div>
                       <div className="mt-1 text-sm text-zinc-700">
                         Total: <span className="font-semibold">{formatDuration(n.total_time_in_system_ms)}</span>

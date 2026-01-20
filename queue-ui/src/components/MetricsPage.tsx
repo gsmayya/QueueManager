@@ -6,6 +6,20 @@ import type { NodesMetricsResponse, ResourcesSessionMetricsResponse } from "../l
 import { NodeMetricsFrame } from "./NodeMetricsFrame";
 import { ResourceMetricsFrame } from "./ResourceMetricsFrame";
 
+function shouldDebugNodeMetrics(): boolean {
+  // Build-time opt-in.
+  if ((process.env.NEXT_PUBLIC_LOG_LEVEL || "").toLowerCase() === "debug") return true;
+  // Runtime opt-in (handy for quick debugging without rebuild): `/metrics?debugMetrics=1`
+  if (typeof window !== "undefined") {
+    try {
+      return new URLSearchParams(window.location.search).get("debugMetrics") === "1";
+    } catch {
+      // ignore
+    }
+  }
+  return false;
+}
+
 export function MetricsPage() {
   const [metrics, setMetrics] = useState<NodesMetricsResponse | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -23,7 +37,11 @@ export function MetricsPage() {
     try {
       const data = await getNodesMetrics();
       setMetrics(data);
-      setMetricsLastUpdated(new Date().toLocaleTimeString());
+      const ts = new Date().toLocaleTimeString();
+      setMetricsLastUpdated(ts);
+      if (shouldDebugNodeMetrics()) {
+        console.log(`[queue-ui] GET /nodes/metrics @ ${ts}`, data);
+      }
     } catch (e) {
       const err = e as Error;
       setMetricsError(err.message);
@@ -36,9 +54,13 @@ export function MetricsPage() {
     setResourceMetricsLoading(true);
     setResourceMetricsError(null);
     try {
-      const data = await getResourcesMetrics();
+      const data = await getResourcesMetrics();      
       setResourceMetrics(data);
-      setResourceMetricsLastUpdated(new Date().toLocaleTimeString());
+      const ts = new Date().toLocaleTimeString();
+      setResourceMetricsLastUpdated(ts);
+      if (shouldDebugNodeMetrics()) {
+        console.log(`[queue-ui] GET /resources/metrics @ ${ts}`, data);
+      }
     } catch (e) {
       const err = e as Error;
       setResourceMetricsError(err.message);

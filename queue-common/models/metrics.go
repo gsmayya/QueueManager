@@ -62,6 +62,7 @@ type WaitingSegment struct {
 type NodeMetrics struct {
 	ID                  string           `json:"id"`
 	EntityName          string           `json:"entity_name"`
+	NodeName            string           `json:"node_name,omitempty"`
 	CreatedAt           time.Time        `json:"created_at"`
 	Completed           bool             `json:"completed"`
 	TotalTimeInSystemMS int64            `json:"total_time_in_system_ms"`
