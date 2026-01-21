@@ -73,6 +73,8 @@ services:
       # Kept for clarity/override at runtime; build arg above ensures it is available during `next build`.
       - API_PROXY_TARGET=http://queue-service:8080
       - MASTER_API_PROXY_TARGET=http://queue-admin:8081
+      # Used to sign the session cookie for UI login.
+      - AUTH_SECRET=${AUTH_SECRET:-dev-insecure-change-me}
     ports:
       - "3000:3000"
     depends_on:

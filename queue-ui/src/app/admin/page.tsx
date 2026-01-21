@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { AdminPanel } from "../../components/admin/AdminPanel";
+import { requireSession } from "../../lib/auth";
+import { AdminAccessGate } from "../../components/admin/AdminAccessGate";
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const session = await requireSession("/admin");
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-700 px-5 py-8">
       <div className="mx-auto mb-4 max-w-6xl">
@@ -9,7 +11,7 @@ export default function AdminPage() {
           ← Back to main
         </Link>
       </div>
-      <AdminPanel />
+      <AdminAccessGate loggedInEmail={session.email} />
     </div>
   );
 }

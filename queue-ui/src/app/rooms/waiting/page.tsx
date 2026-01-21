@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { NodePage } from "../../components/node/NodePage";
-import { requireSession } from "../../lib/auth";
+import { WaitingRoomsPage } from "../../../components/rooms/WaitingRoomsPage";
 
-export default async function Page() {
-  await requireSession("/node");
+export default function Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-700 px-5 py-8">
       <div className="mx-auto mb-4 max-w-6xl">
@@ -11,7 +9,7 @@ export default async function Page() {
           ← Back to main
         </Link>
       </div>
-      <NodePage />
+      <WaitingRoomsPage />
     </div>
   );
 }

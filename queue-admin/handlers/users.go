@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"queue-common/logging"
 	"queue-common/models"
 	"queue-common/utils"
 
@@ -23,20 +24,25 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Never log plaintext passwords.
+	logging.Infof("[users] create requested user_id=%q name=%q email=%q", req.UserID, req.Name, req.Email)
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
+		logging.Errorf("[users] create failed to hash password user_id=%q email=%q err=%v", req.UserID, req.Email, err)
 		utils.RespondWithError(w, http.StatusInternalServerError, "failed to hash password")
 		return
 	}
 
 	out, err := s.userStore.CreateUser(r.Context(), req.UserID, req.Name, req.Email, string(hash))
 	if err != nil {
+		logging.Errorf("[users] create failed user_id=%q email=%q err=%v", req.UserID, req.Email, err)
 		if mapStoreErr(w, err) {
 			return
 		}
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logging.Infof("[users] create succeeded id=%s user_id=%q", out.ID, out.UserID)
 	utils.RespondWithJSON(w, http.StatusCreated, out)
 }
 
@@ -104,23 +110,31 @@ func (s *Service) UpdateUser(w http.ResponseWriter, r *http.Request, id string) 
 			utils.RespondWithError(w, http.StatusBadRequest, "password cannot be empty")
 			return
 		}
+		// Never log plaintext passwords.
+		logging.Infof("[users] update requested id=%s user_id=%v name=%v email=%v password_updated=true", id, req.UserID != nil, req.Name != nil, req.Email != nil)
 		hash, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
 		if err != nil {
+			logging.Errorf("[users] update failed to hash password id=%s err=%v", id, err)
 			utils.RespondWithError(w, http.StatusInternalServerError, "failed to hash password")
 			return
 		}
 		h := string(hash)
 		hashPtr = &h
 	}
+	if req.Password == nil {
+		logging.Infof("[users] update requested id=%s user_id=%v name=%v email=%v password_updated=false", id, req.UserID != nil, req.Name != nil, req.Email != nil)
+	}
 
 	out, err := s.userStore.UpdateUser(r.Context(), id, req.UserID, req.Name, req.Email, hashPtr)
 	if err != nil {
+		logging.Errorf("[users] update failed id=%s err=%v", id, err)
 		if mapStoreErr(w, err) {
 			return
 		}
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logging.Infof("[users] update succeeded id=%s", out.ID)
 	utils.RespondWithJSON(w, http.StatusOK, out)
 }
 

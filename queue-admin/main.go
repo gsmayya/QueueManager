@@ -2,31 +2,35 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
 	"queue-admin/handlers"
 	"queue-common/db"
+	"queue-common/logging"
 	"queue-common/store"
 )
 
 func main() {
 	dbConn, err := db.OpenFromEnv(getDBConfigFromEnv())
 	if err != nil {
-		log.Fatalf("[DB] failed to connect: %v", err)
+		logging.Errorf("[DB] failed to connect: %v", err)
+		os.Exit(1)
 	}
 	if dbConn == nil {
-		log.Fatal("[DB] missing MASTER_DB_* env vars (MASTER_DB_HOST/PORT/USER required)")
+		logging.Errorf("[DB] missing MASTER_DB_* env vars (MASTER_DB_HOST/PORT/USER required)")
+		os.Exit(1)
 	}
 	defer dbConn.Close()
 
 	nodequeueConn, err := db.OpenFromEnv(getNodeQueueConfigFromEnv())
 	if err != nil {
-		log.Fatalf("[DB] failed to connect to nodequeue db: %v", err)
+		logging.Errorf("[DB] failed to connect to nodequeue db: %v", err)
+		os.Exit(1)
 	}
 	if nodequeueConn == nil {
-		log.Fatal("[DB] missing NODEQUEUE_DB_* env vars (or MASTER_DB_* fallback) for rooms APIs")
+		logging.Errorf("[DB] missing NODEQUEUE_DB_* env vars (or MASTER_DB_* fallback) for rooms APIs")
+		os.Exit(1)
 	}
 	defer nodequeueConn.Close()
 
@@ -44,27 +48,28 @@ func main() {
 	}
 	addr := fmt.Sprintf(":%s", port)
 
-	log.Printf("Starting master-service on %s", addr)
-	log.Println("API Endpoints:")
-	log.Println("  GET    /health")
-	log.Println("  POST   /entities")
-	log.Println("  GET    /entities")
-	log.Println("  GET    /entities/{id}")
-	log.Println("  PUT    /entities/{id}")
-	log.Println("  DELETE /entities/{id}")
-	log.Println("  POST   /users")
-	log.Println("  GET    /users")
-	log.Println("  GET    /users/{id}")
-	log.Println("  PUT    /users/{id}")
-	log.Println("  DELETE /users/{id}")
-	log.Println("  POST   /rooms")
-	log.Println("  GET    /rooms")
-	log.Println("  GET    /rooms/{id}")
-	log.Println("  PUT    /rooms/{id}")
-	log.Println("  DELETE /rooms/{id} (soft delete)")
+	logging.Infof("Starting master-service on %s", addr)
+	logging.Infof("API Endpoints:")
+	logging.Infof("  GET    /health")
+	logging.Infof("  POST   /entities")
+	logging.Infof("  GET    /entities")
+	logging.Infof("  GET    /entities/{id}")
+	logging.Infof("  PUT    /entities/{id}")
+	logging.Infof("  DELETE /entities/{id}")
+	logging.Infof("  POST   /users")
+	logging.Infof("  GET    /users")
+	logging.Infof("  GET    /users/{id}")
+	logging.Infof("  PUT    /users/{id}")
+	logging.Infof("  DELETE /users/{id}")
+	logging.Infof("  POST   /rooms")
+	logging.Infof("  GET    /rooms")
+	logging.Infof("  GET    /rooms/{id}")
+	logging.Infof("  PUT    /rooms/{id}")
+	logging.Infof("  DELETE /rooms/{id} (soft delete)")
 
 	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatal("Server failed to start:", err)
+		logging.Errorf("Server failed to start: %v", err)
+		os.Exit(1)
 	}
 }
 

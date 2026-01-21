@@ -118,6 +118,12 @@ export function QueueManager() {
             Nodes
           </Link>
           <Link
+            href="/rooms/waiting"
+            className="rounded-full bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/15"
+          >
+            Waiting Rooms
+          </Link>
+          <Link
             href="/metrics"
             className="rounded-full bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/15"
           >

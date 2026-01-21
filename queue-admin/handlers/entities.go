@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"queue-common/logging"
 	"queue-common/models"
 	"queue-common/utils"
 )
@@ -20,14 +21,17 @@ func (s *Service) CreateEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logging.Infof("[entities] create requested name=%q phone=%q", req.Name, maskPhone(req.Phone))
 	out, err := s.entityStore.CreateEntity(r.Context(), req)
 	if err != nil {
+		logging.Errorf("[entities] create failed name=%q phone=%q err=%v", req.Name, maskPhone(req.Phone), err)
 		if mapStoreErr(w, err) {
 			return
 		}
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logging.Infof("[entities] create succeeded id=%s name=%q", out.ID, out.Name)
 	utils.RespondWithJSON(w, http.StatusCreated, out)
 }
 
@@ -90,14 +94,25 @@ func (s *Service) UpdateEntity(w http.ResponseWriter, r *http.Request, id string
 		}
 	}
 
+	var nameVal any = nil
+	if req.Name != nil {
+		nameVal = *req.Name
+	}
+	var phoneVal any = nil
+	if req.Phone != nil {
+		phoneVal = maskPhone(*req.Phone)
+	}
+	logging.Infof("[entities] update requested id=%s name=%v phone=%v", id, nameVal, phoneVal)
 	out, err := s.entityStore.UpdateEntity(r.Context(), id, req)
 	if err != nil {
+		logging.Errorf("[entities] update failed id=%s err=%v", id, err)
 		if mapStoreErr(w, err) {
 			return
 		}
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logging.Infof("[entities] update succeeded id=%s", out.ID)
 	utils.RespondWithJSON(w, http.StatusOK, out)
 }
 

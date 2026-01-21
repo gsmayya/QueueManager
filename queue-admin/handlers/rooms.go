@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"queue-common/logging"
 	"queue-common/models"
 	"queue-common/utils"
 
@@ -32,14 +33,17 @@ func (s *Service) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		req.ID = uuid.New().String()
 	}
 
+	logging.Infof("[rooms] create requested id=%q name=%q capacity=%d", req.ID, req.Name, req.Capacity)
 	out, err := s.roomStore.CreateRoom(r.Context(), req)
 	if err != nil {
+		logging.Errorf("[rooms] create failed id=%q err=%v", req.ID, err)
 		if mapStoreErr(w, err) {
 			return
 		}
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logging.Infof("[rooms] create succeeded id=%q name=%q", out.ID, out.Name)
 	utils.RespondWithJSON(w, http.StatusCreated, out)
 }
 
@@ -98,14 +102,17 @@ func (s *Service) UpdateRoom(w http.ResponseWriter, r *http.Request, id string) 
 		return
 	}
 
+	logging.Infof("[rooms] update requested id=%q name_updated=%v capacity_updated=%v", id, req.Name != nil, req.Capacity != nil)
 	out, err := s.roomStore.UpdateRoom(r.Context(), id, req)
 	if err != nil {
+		logging.Errorf("[rooms] update failed id=%q err=%v", id, err)
 		if mapStoreErr(w, err) {
 			return
 		}
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logging.Infof("[rooms] update succeeded id=%q", out.ID)
 	utils.RespondWithJSON(w, http.StatusOK, out)
 }
 

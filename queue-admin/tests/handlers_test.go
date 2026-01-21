@@ -23,12 +23,16 @@ type memStore struct {
 
 	// For testing hashing behavior
 	lastPasswordHash string
+
+	// Stored hashes for auth tests keyed by email.
+	userPasswordHashByEmail map[string]string
 }
 
 func newMemStore() *memStore {
 	return &memStore{
-		entities: map[string]models.Entity{},
-		users:    map[string]models.User{},
+		entities:                map[string]models.Entity{},
+		users:                   map[string]models.User{},
+		userPasswordHashByEmail: map[string]string{},
 	}
 }
 
@@ -122,6 +126,7 @@ func (m *memStore) CreateUser(ctx context.Context, userID, name, email, password
 		}
 	}
 	m.lastPasswordHash = passwordHash
+	m.userPasswordHashByEmail[email] = passwordHash
 	u := models.User{
 		ID:        "22222222-2222-2222-2222-222222222222",
 		UserID:    userID,
@@ -149,11 +154,25 @@ func (m *memStore) GetUser(ctx context.Context, id string) (models.User, error) 
 	return u, nil
 }
 
+func (m *memStore) GetUserAuthByEmail(ctx context.Context, email string) (models.User, string, error) {
+	for _, u := range m.users {
+		if u.Email == email {
+			hash := m.userPasswordHashByEmail[email]
+			if hash == "" {
+				hash = m.lastPasswordHash
+			}
+			return u, hash, nil
+		}
+	}
+	return models.User{}, "", store.ErrNotFound
+}
+
 func (m *memStore) UpdateUser(ctx context.Context, id string, userID, name, email *string, passwordHash *string) (models.User, error) {
 	u, ok := m.users[id]
 	if !ok {
 		return models.User{}, store.ErrNotFound
 	}
+	oldEmail := u.Email
 	if userID != nil {
 		u.UserID = *userID
 	}
@@ -165,6 +184,16 @@ func (m *memStore) UpdateUser(ctx context.Context, id string, userID, name, emai
 	}
 	if passwordHash != nil {
 		m.lastPasswordHash = *passwordHash
+		m.userPasswordHashByEmail[u.Email] = *passwordHash
+	}
+	if u.Email != oldEmail {
+		if h, ok := m.userPasswordHashByEmail[oldEmail]; ok {
+			delete(m.userPasswordHashByEmail, oldEmail)
+			// carry over if we have one
+			if _, exists := m.userPasswordHashByEmail[u.Email]; !exists && h != "" {
+				m.userPasswordHashByEmail[u.Email] = h
+			}
+		}
 	}
 	// enforce uniqueness
 	for k, other := range m.users {

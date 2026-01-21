@@ -69,6 +69,8 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=/api
       - API_PROXY_TARGET=http://queue-service:8080
       - MASTER_API_PROXY_TARGET=http://queue-admin:8081
+      # Used to sign the session cookie for UI login.
+      - AUTH_SECRET=${AUTH_SECRET:-dev-insecure-change-me}
       - HOSTNAME=0.0.0.0
       - PORT=3000
     volumes:

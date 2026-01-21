@@ -21,17 +21,17 @@ ON CONFLICT (id) DO NOTHING;
 -- 10 sample users (system users)
 -- password for all seeded users: "password123"
 -- bcrypt hash generated via master-service module: $2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi
-INSERT INTO users (id, user_id, name, email, password_hash, created_at)
+INSERT INTO users (id, user_id, name, email, is_admin, password_hash, created_at)
 VALUES
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'admin',     'Admin User',     'admin@example.com',     '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '30 days'),
-  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'user01',    'User 01',        'user01@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '29 days'),
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'user02',    'User 02',        'user02@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '28 days'),
-  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'user03',    'User 03',        'user03@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '27 days'),
-  ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'user04',    'User 04',        'user04@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '26 days'),
-  ('12121212-1212-1212-1212-121212121212', 'user05',    'User 05',        'user05@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '25 days'),
-  ('13131313-1313-1313-1313-131313131313', 'user06',    'User 06',        'user06@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '24 days'),
-  ('14141414-1414-1414-1414-141414141414', 'user07',    'User 07',        'user07@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '23 days'),
-  ('15151515-1515-1515-1515-151515151515', 'user08',    'User 08',        'user08@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '22 days'),
-  ('16161616-1616-1616-1616-161616161616', 'user09',    'User 09',        'user09@example.com',    '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '21 days')
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'admin',     'Admin User',     'admin@example.com',     true,  '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '30 days'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'user01',    'User 01',        'user01@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '29 days'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'user02',    'User 02',        'user02@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '28 days'),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'user03',    'User 03',        'user03@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '27 days'),
+  ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'user04',    'User 04',        'user04@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '26 days'),
+  ('12121212-1212-1212-1212-121212121212', 'user05',    'User 05',        'user05@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '25 days'),
+  ('13131313-1313-1313-1313-131313131313', 'user06',    'User 06',        'user06@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '24 days'),
+  ('14141414-1414-1414-1414-141414141414', 'user07',    'User 07',        'user07@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '23 days'),
+  ('15151515-1515-1515-1515-151515151515', 'user08',    'User 08',        'user08@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '22 days'),
+  ('16161616-1616-1616-1616-161616161616', 'user09',    'User 09',        'user09@example.com',    false, '$2a$10$E16dJIPZg8noTdupU3zRwOmvXc6aLyCG.Ueenl23knHuVkbFsKqHi', now() - interval '21 days')
 ON CONFLICT (id) DO NOTHING;
 

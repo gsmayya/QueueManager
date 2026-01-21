@@ -17,6 +17,7 @@ type User struct {
 	UserID    string    `json:"user_id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
+	IsAdmin   bool      `json:"is_admin"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -47,6 +48,15 @@ type UpdateUserRequest struct {
 	Name     *string `json:"name,omitempty"`
 	Email    *string `json:"email,omitempty"`
 	Password *string `json:"password,omitempty"`
+}
+
+// --- Auth
+
+// LoginRequest validates credentials for an existing user.
+// Email is the login identifier; password is compared against users.password_hash (bcrypt).
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // Room represents a resource/room from the nodequeue database.

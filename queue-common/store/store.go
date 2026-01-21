@@ -63,6 +63,9 @@ type UserStore interface {
 	CreateUser(ctx context.Context, userID, name, email, passwordHash string) (models.User, error)
 	ListUsers(ctx context.Context) ([]models.User, error)
 	GetUser(ctx context.Context, id string) (models.User, error)
+	// GetUserAuthByEmail returns the user plus the stored password hash for authentication.
+	// The password hash MUST NOT be exposed by API handlers.
+	GetUserAuthByEmail(ctx context.Context, email string) (models.User, string, error)
 	UpdateUser(ctx context.Context, id string, userID, name, email *string, passwordHash *string) (models.User, error)
 	DeleteUser(ctx context.Context, id string) error
 }
