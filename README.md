@@ -5,14 +5,25 @@ Queue Manager is a multi-service system for managing and simulating **resource q
 ```mermaid
 graph TD;
   UI[queue-ui]
+  AP[Admin Panel]
+  NP[Nodes Panel]
+  QP[Queue Panel]
+  MP[Metrics Panel]
   QS[queue-service]
   QA[queue-admin]
   AG[queue-agent]
   DB[(postgres)]
 
-  UI -->|/api| QS
-  UI -->|/master-api| QA
+  UI -->|Admin Ops| AP
+  AP -->|/master-api| QA
+  UI -->|Node Ops| NP
+  NP -->|/api| QS
+  UI -->|Metrics Details| MP
+  MP -->|/api| QS
+  UI -->|Queue Ops| QP
+  QP -->|/api| QS 
   UI -->|/api/agent| AG
+  AG -->|/api| QS
 
   QS --> DB
   QA --> DB
