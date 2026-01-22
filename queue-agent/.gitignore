@@ -1,0 +1,19 @@
+# Go build/test artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Common binary names
+queue-agent
+
+# Coverage / profiling outputs
+coverage.out
+*.prof
+
+# Local caches (used by scripts/ and sandboxed runs)
+.gocache/
+.gomodcache/
+

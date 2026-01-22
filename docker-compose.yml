@@ -73,6 +73,8 @@ services:
       # Kept for clarity/override at runtime; build arg above ensures it is available during `next build`.
       - API_PROXY_TARGET=http://queue-service:8080
       - MASTER_API_PROXY_TARGET=http://queue-admin:8081
+      # Server-side only: queue-ui API route calls queue-agent over the docker network.
+      - QUEUE_AGENT_BASE_URL=http://queue-agent:8090
       # Used to sign the session cookie for UI login.
       - AUTH_SECRET=${AUTH_SECRET:-dev-insecure-change-me}
     ports:
@@ -80,6 +82,18 @@ services:
     depends_on:
       - queue-service
       - queue-admin
+
+  queue-agent:
+    build:
+      context: .
+      dockerfile: queue-agent/Dockerfile
+    environment:
+      - QUEUE_SERVICE_BASE_URL=http://queue-service:8080
+      - QUEUE_AGENT_HTTP_ADDR=:8090
+    ports:
+      - "8090:8090"
+    depends_on:
+      - queue-service
 
 volumes:
   nodequeue_db_data:

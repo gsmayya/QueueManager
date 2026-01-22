@@ -1,0 +1,6 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"clientInfo":{"name":"metrics-example","version":"0.0.0"},"protocolVersion":"2024-11-05","capabilities":{}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"queue_nodes_metrics","arguments":{}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"queue_resources_metrics","arguments":{}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"queue_metrics_question","arguments":{"question":"Which resource has the highest avg waiting time?"}}}
+{"jsonrpc":"2.0","id":6,"method":"shutdown","params":{}}

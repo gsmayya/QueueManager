@@ -69,6 +69,7 @@ services:
       - NEXT_PUBLIC_API_BASE_URL=/api
       - API_PROXY_TARGET=http://queue-service:8080
       - MASTER_API_PROXY_TARGET=http://queue-admin:8081
+      - QUEUE_AGENT_BASE_URL=http://queue-agent:8090
       # Used to sign the session cookie for UI login.
       - AUTH_SECRET=${AUTH_SECRET:-dev-insecure-change-me}
       - HOSTNAME=0.0.0.0
@@ -82,6 +83,23 @@ services:
       - queue-service
       - queue-admin
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"
+
+  queue-agent:
+    image: golang:1.25-alpine
+    working_dir: /app/queue-agent
+    environment:
+      - QUEUE_SERVICE_BASE_URL=http://queue-service:8080
+      - QUEUE_AGENT_HTTP_ADDR=:8090
+      - CGO_ENABLED=0
+    volumes:
+      - ./queue-agent:/app/queue-agent
+      - ./queue-common:/app/queue-common
+      - go_mod_cache:/go/pkg/mod
+    ports:
+      - "8090:8090"
+    depends_on:
+      - queue-service
+    command: sh -c "go mod download && go run ."
 
 volumes:
   go_mod_cache:
