@@ -15,6 +15,43 @@ import (
 //
 // Note: net/http's DefaultServeMux is used for simplicity.
 func setupRoutes(qs *queueservice.QueueService) {
+	http.HandleFunc("/schedules/metrics", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		qs.SchedulesMetricsHandler(w, r)
+	}))
+
+	http.HandleFunc("/schedules", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			qs.CreateScheduleHandler(w, r)
+		case http.MethodGet:
+			qs.ListSchedulesHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	http.HandleFunc("/schedules/", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		path, ok := strings.CutPrefix(r.URL.Path, "/schedules/")
+		if !ok || path == "" {
+			qs.ListSchedulesHandler(w, r)
+			return
+		}
+		scheduleID, rest, _ := strings.Cut(path, "/")
+		if scheduleID == "" {
+			qs.ListSchedulesHandler(w, r)
+			return
+		}
+		if rest != "" {
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		if r.Method == http.MethodPut {
+			qs.UpdateScheduleHandler(w, r, scheduleID)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}))
+
 	http.HandleFunc("/nodes/metrics", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		qs.NodesMetricsHandler(w, r)
 	}))

@@ -17,13 +17,22 @@ var (
 )
 
 type PersistedNode struct {
-	NodeID     string
-	EntityID   string
-	EntityName string
-	NodeName   string
-	ResourceID *string
-	Completed  bool
-	CreatedAt  time.Time
+	NodeID            string
+	EntityID          string
+	EntityName        string
+	NodeName          string
+	ResourceID        *string
+	ScheduleID        *string
+	TimeLimitSeconds  *int
+	WaitingExpirySeconds *int
+	AssignedAt        *time.Time
+	DueAt             *time.Time
+	ExpiresAt         *time.Time
+	DelayFlag         bool
+	Expired           bool
+	ExpiredAt         *time.Time
+	Completed         bool
+	CreatedAt         time.Time
 }
 
 type QueueKind string
@@ -98,8 +107,28 @@ type NodeStore interface {
 	ListLatestNodeStates(ctx context.Context) (map[string]NodeState, error)
 	ListNodeLogs(ctx context.Context, nodeIDs []string) (map[string][]NodeLogRow, error)
 
+	// EnsureEntity upserts an entity row into nodequeue.entities.
+	// This is useful for schedules, which reference entities via FK.
+	EnsureEntity(ctx context.Context, entityID, entityName string, createdAt time.Time) error
+
 	PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error
 	UpdateNodeResource(ctx context.Context, nodeID string, resourceID *string) error
 	MarkNodeCompleted(ctx context.Context, nodeID string, completed bool) error
 	InsertNodeLog(ctx context.Context, nodeID, action string, resourceID *string, ts time.Time) error
+
+	// Scheduling helpers.
+	UpdateNodeScheduling(ctx context.Context, nodeID string, scheduleID *string, timeLimitSeconds *int, assignedAt, dueAt *time.Time, delayFlag *bool) error
+	UpdateNodeExpiry(ctx context.Context, nodeID string, waitingExpirySeconds *int, expiresAt *time.Time) error
+	MarkNodeExpired(ctx context.Context, nodeID string, expiredAt time.Time) error
+	HasActiveNodeForSchedule(ctx context.Context, scheduleID string) (bool, error)
+	MarkOverdueNodes(ctx context.Context, now time.Time) (int64, error)
+}
+
+type ScheduleStore interface {
+	CreateSchedule(ctx context.Context, in models.CreateScheduleRequest) (models.Schedule, error)
+	ListSchedules(ctx context.Context) ([]models.Schedule, error)
+	ListDueSchedules(ctx context.Context, now time.Time) ([]models.Schedule, error)
+	UpdateSchedule(ctx context.Context, id string, in models.UpdateScheduleRequest) (models.Schedule, error)
+	UpdateScheduleNextRunAt(ctx context.Context, id string, nextRunAt time.Time) error
+	GetSchedulesMetrics(ctx context.Context, now time.Time) (models.SchedulesMetricsResponse, error)
 }

@@ -37,6 +37,10 @@ func (qs *QueueService) NodesMetricsHandler(w http.ResponseWriter, r *http.Reque
 			NodeName:  n.NodeName,
 			Entity:    entityName,
 			CreatedAt: n.CreatedAt,
+			ScheduleID: n.ScheduleID,
+			AssignedAt: n.AssignedAt,
+			DueAt:      n.DueAt,
+			DelayFlag:  n.DelayFlag,
 			Completed: n.Completed,
 		}
 		nodeIDs = append(nodeIDs, id)
@@ -125,6 +129,10 @@ type nodeSnapshot struct {
 	NodeName  string
 	Entity    string
 	CreatedAt time.Time
+	ScheduleID *string
+	AssignedAt *time.Time
+	DueAt      *time.Time
+	DelayFlag  bool
 	Completed bool
 }
 
@@ -232,6 +240,10 @@ func (qs *QueueService) computeNodeMetrics(now time.Time, n nodeSnapshot, events
 		EntityName:          n.Entity,
 		NodeName:            n.NodeName,
 		CreatedAt:           n.CreatedAt,
+		ScheduleID:          n.ScheduleID,
+		AssignedAt:          n.AssignedAt,
+		DueAt:               n.DueAt,
+		DelayFlag:           n.DelayFlag,
 		Completed:           n.Completed,
 		TotalTimeInSystemMS: total.Milliseconds(),
 		WaitingSegments:     segments,

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { getNodesMetrics, getResourcesMetrics } from "../lib/api";
-import type { NodesMetricsResponse, ResourcesSessionMetricsResponse } from "../lib/types";
+import { getNodesMetrics, getResourcesMetrics, getSchedulesMetrics } from "../lib/api";
+import type { NodesMetricsResponse, ResourcesSessionMetricsResponse, SchedulesMetricsResponse } from "../lib/types";
 import { NodeMetricsFrame } from "./NodeMetricsFrame";
 import { ResourceMetricsFrame } from "./ResourceMetricsFrame";
+import { ScheduleMetricsFrame } from "./ScheduleMetricsFrame";
 
 function shouldDebugNodeMetrics(): boolean {
   // Build-time opt-in.
@@ -30,6 +31,11 @@ export function MetricsPage() {
   const [resourceMetricsLoading, setResourceMetricsLoading] = useState(false);
   const [resourceMetricsError, setResourceMetricsError] = useState<string | null>(null);
   const [resourceMetricsLastUpdated, setResourceMetricsLastUpdated] = useState<string | null>(null);
+
+  const [scheduleMetrics, setScheduleMetrics] = useState<SchedulesMetricsResponse | null>(null);
+  const [scheduleMetricsLoading, setScheduleMetricsLoading] = useState(false);
+  const [scheduleMetricsError, setScheduleMetricsError] = useState<string | null>(null);
+  const [scheduleMetricsLastUpdated, setScheduleMetricsLastUpdated] = useState<string | null>(null);
 
   const refreshMetrics = useCallback(async () => {
     setMetricsLoading(true);
@@ -69,16 +75,37 @@ export function MetricsPage() {
     }
   }, []);
 
+  const refreshScheduleMetrics = useCallback(async () => {
+    setScheduleMetricsLoading(true);
+    setScheduleMetricsError(null);
+    try {
+      const data = await getSchedulesMetrics();
+      setScheduleMetrics(data);
+      const ts = new Date().toLocaleTimeString();
+      setScheduleMetricsLastUpdated(ts);
+      if (shouldDebugNodeMetrics()) {
+        console.log(`[queue-ui] GET /schedules/metrics @ ${ts}`, data);
+      }
+    } catch (e) {
+      const err = e as Error;
+      setScheduleMetricsError(err.message);
+    } finally {
+      setScheduleMetricsLoading(false);
+    }
+  }, []);
+
   // Poll metrics every 10s (same behavior as before).
   useEffect(() => {
     refreshMetrics().catch(() => {});
     refreshResourceMetrics().catch(() => {});
+    refreshScheduleMetrics().catch(() => {});
     const t = setInterval(() => {
       refreshMetrics().catch(() => {});
       refreshResourceMetrics().catch(() => {});
+      refreshScheduleMetrics().catch(() => {});
     }, 10000);
     return () => clearInterval(t);
-  }, [refreshMetrics, refreshResourceMetrics]);
+  }, [refreshMetrics, refreshResourceMetrics, refreshScheduleMetrics]);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -92,6 +119,13 @@ export function MetricsPage() {
         loading={resourceMetricsLoading}
         error={resourceMetricsError}
         lastUpdatedAt={resourceMetricsLastUpdated}
+      />
+
+      <ScheduleMetricsFrame
+        metrics={scheduleMetrics}
+        loading={scheduleMetricsLoading}
+        error={scheduleMetricsError}
+        lastUpdatedAt={scheduleMetricsLastUpdated}
       />
 
       <NodeMetricsFrame

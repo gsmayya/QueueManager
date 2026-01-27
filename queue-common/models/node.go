@@ -23,6 +23,18 @@ type Node struct {
 	ResourceID  string    `json:"resource_id,omitempty"`
 	Completed   bool      `json:"completed"`
 	CreatedAt   time.Time `json:"created_at"`
+
+	// Scheduling/deadline fields (optional; zero values indicate non-scheduled nodes).
+	ScheduleID        *string    `json:"schedule_id,omitempty"`
+	TimeLimitSeconds  *int       `json:"time_limit_seconds,omitempty"`
+	WaitingExpirySeconds *int    `json:"waiting_expiry_seconds,omitempty"`
+	AssignedAt        *time.Time `json:"assigned_at,omitempty"`
+	DueAt             *time.Time `json:"due_at,omitempty"`
+	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
+	DelayFlag         bool       `json:"delay_flag"`
+	Expired           bool       `json:"expired"`
+	ExpiredAt         *time.Time `json:"expired_at,omitempty"`
+
 	resourceIDs []string
 	Log         []NodeLog `json:"log"`
 	mu          sync.RWMutex

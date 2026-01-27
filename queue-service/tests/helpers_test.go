@@ -60,6 +60,9 @@ func (s *stubReadLogsStore) ListNodeLogs(ctx context.Context, nodeIDs []string) 
 	}
 	return out, nil
 }
+func (s *stubReadLogsStore) EnsureEntity(ctx context.Context, entityID, entityName string, createdAt time.Time) error {
+	return nil
+}
 func (s *stubReadLogsStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error {
 	return nil
 }
@@ -71,6 +74,21 @@ func (s *stubReadLogsStore) MarkNodeCompleted(ctx context.Context, nodeID string
 }
 func (s *stubReadLogsStore) InsertNodeLog(ctx context.Context, nodeID, action string, resourceID *string, ts time.Time) error {
 	return nil
+}
+func (s *stubReadLogsStore) UpdateNodeScheduling(ctx context.Context, nodeID string, scheduleID *string, timeLimitSeconds *int, assignedAt, dueAt *time.Time, delayFlag *bool) error {
+	return nil
+}
+func (s *stubReadLogsStore) UpdateNodeExpiry(ctx context.Context, nodeID string, waitingExpirySeconds *int, expiresAt *time.Time) error {
+	return nil
+}
+func (s *stubReadLogsStore) MarkNodeExpired(ctx context.Context, nodeID string, expiredAt time.Time) error {
+	return nil
+}
+func (s *stubReadLogsStore) HasActiveNodeForSchedule(ctx context.Context, scheduleID string) (bool, error) {
+	return false, nil
+}
+func (s *stubReadLogsStore) MarkOverdueNodes(ctx context.Context, now time.Time) (int64, error) {
+	return 0, nil
 }
 
 var _ store.NodeStore = (*stubReadLogsStore)(nil)

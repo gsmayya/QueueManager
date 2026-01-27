@@ -31,6 +31,10 @@ func (s *stubStore) ListNodeLogs(ctx context.Context, nodeIDs []string) (map[str
 	return map[string][]storepkg.NodeLogRow{}, nil
 }
 
+func (s *stubStore) EnsureEntity(ctx context.Context, entityID, entityName string, createdAt time.Time) error {
+	return nil
+}
+
 func (s *stubStore) PersistNodeCreated(ctx context.Context, nodeID, entityID, entityName, nodeName string, createdAt time.Time) error {
 	return nil
 }
@@ -42,6 +46,22 @@ func (s *stubStore) MarkNodeCompleted(ctx context.Context, nodeID string, comple
 }
 func (s *stubStore) InsertNodeLog(ctx context.Context, nodeID, action string, resourceID *string, ts time.Time) error {
 	return nil
+}
+
+func (s *stubStore) UpdateNodeScheduling(ctx context.Context, nodeID string, scheduleID *string, timeLimitSeconds *int, assignedAt, dueAt *time.Time, delayFlag *bool) error {
+	return nil
+}
+func (s *stubStore) UpdateNodeExpiry(ctx context.Context, nodeID string, waitingExpirySeconds *int, expiresAt *time.Time) error {
+	return nil
+}
+func (s *stubStore) MarkNodeExpired(ctx context.Context, nodeID string, expiredAt time.Time) error {
+	return nil
+}
+func (s *stubStore) HasActiveNodeForSchedule(ctx context.Context, scheduleID string) (bool, error) {
+	return false, nil
+}
+func (s *stubStore) MarkOverdueNodes(ctx context.Context, now time.Time) (int64, error) {
+	return 0, nil
 }
 
 func TestRestoreFromStore_RebuildsQueuesAndOrder(t *testing.T) {

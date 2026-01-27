@@ -79,6 +79,18 @@ export default async function Home() {
           </Link>
 
           <Link
+            href="/schedules"
+            className="group rounded-2xl bg-white/10 p-6 shadow-sm ring-1 ring-white/10 transition hover:bg-white/15"
+          >
+            <div className="text-sm font-semibold tracking-widest text-white/70">LOGIN REQUIRED</div>
+            <div className="mt-2 text-2xl font-semibold">Schedules</div>
+            <div className="mt-2 text-white/80">Create and manage recurring schedules with time limits.</div>
+            <div className="mt-5 text-sm font-semibold text-white/90 group-hover:text-white">
+              Open →
+            </div>
+          </Link>
+
+          <Link
             href="/queue"
             className="group rounded-2xl bg-white/10 p-6 shadow-sm ring-1 ring-white/10 transition hover:bg-white/15"
           >

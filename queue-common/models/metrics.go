@@ -64,6 +64,10 @@ type NodeMetrics struct {
 	EntityName          string           `json:"entity_name"`
 	NodeName            string           `json:"node_name,omitempty"`
 	CreatedAt           time.Time        `json:"created_at"`
+	ScheduleID          *string          `json:"schedule_id,omitempty"`
+	AssignedAt          *time.Time       `json:"assigned_at,omitempty"`
+	DueAt               *time.Time       `json:"due_at,omitempty"`
+	DelayFlag           bool             `json:"delay_flag"`
 	Completed           bool             `json:"completed"`
 	TotalTimeInSystemMS int64            `json:"total_time_in_system_ms"`
 	WaitingSegments     []WaitingSegment `json:"waiting_segments"`
@@ -73,4 +77,54 @@ type NodeMetrics struct {
 type NodesMetricsResponse struct {
 	ActiveNodes    []NodeMetrics `json:"active_nodes"`
 	CompletedNodes []NodeMetrics `json:"completed_nodes"`
+}
+
+// --- Schedule metrics (DB-backed, computed from nodes + node_logs)
+
+type SchedulesMetricsTotals struct {
+	Now time.Time `json:"now"`
+
+	TotalSchedules   int64 `json:"total_schedules"`
+	EnabledSchedules int64 `json:"enabled_schedules"`
+	EndedSchedules   int64 `json:"ended_schedules"`
+
+	// Node outcomes (scheduled nodes only).
+	FiredCount   int64 `json:"fired_count"`
+	CompletedCount int64 `json:"completed_count"`
+	ExpiredCount int64 `json:"expired_count"`
+
+	CompletedWithinTimeLimitCount int64 `json:"completed_within_time_limit_count"`
+
+	AvgAssignedToAllocateMS *int64 `json:"avg_assigned_to_allocate_ms,omitempty"`
+	AvgAssignedToCompleteMS *int64 `json:"avg_assigned_to_complete_ms,omitempty"`
+	AvgAssignedToExpiredMS  *int64 `json:"avg_assigned_to_expired_ms,omitempty"`
+}
+
+type ScheduleMetrics struct {
+	ScheduleID          string     `json:"schedule_id"`
+	EntityID            string     `json:"entity_id"`
+	ResourceID          string     `json:"resource_id"`
+	IntervalSeconds     int        `json:"interval_seconds"`
+	TimeLimitSeconds    int        `json:"time_limit_seconds"`
+	WaitingExpirySeconds int       `json:"waiting_expiry_seconds"`
+	EndsAt              *time.Time `json:"ends_at,omitempty"`
+	Enabled             bool       `json:"enabled"`
+	NextRunAt           time.Time  `json:"next_run_at"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+
+	FiredCount   int64 `json:"fired_count"`
+	CompletedCount int64 `json:"completed_count"`
+	ExpiredCount int64 `json:"expired_count"`
+
+	CompletedWithinTimeLimitCount int64 `json:"completed_within_time_limit_count"`
+
+	AvgAssignedToAllocateMS *int64 `json:"avg_assigned_to_allocate_ms,omitempty"`
+	AvgAssignedToCompleteMS *int64 `json:"avg_assigned_to_complete_ms,omitempty"`
+	AvgAssignedToExpiredMS  *int64 `json:"avg_assigned_to_expired_ms,omitempty"`
+}
+
+type SchedulesMetricsResponse struct {
+	Totals    SchedulesMetricsTotals `json:"totals"`
+	Schedules []ScheduleMetrics      `json:"schedules"`
 }

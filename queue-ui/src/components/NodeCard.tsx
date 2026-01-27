@@ -20,6 +20,24 @@ function formatDuration(ms: number): string {
   return `${ss}s`;
 }
 
+function safeDate(s?: string): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+function formatDelta(target: Date, now: Date): { label: string; overdue: boolean } {
+  const ms = target.getTime() - now.getTime();
+  const overdue = ms < 0;
+  const abs = Math.abs(ms);
+  const s = Math.floor(abs / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const base = h > 0 ? `${h}h ${m}m ${ss}s` : m > 0 ? `${m}m ${ss}s` : `${ss}s`;
+  return { label: overdue ? `${base} overdue` : `${base} left`, overdue };
+}
+
 function getResourceHistory(node: Node): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -50,6 +68,14 @@ export function NodeCard({
 }) {
   const disabled = node.completed;
   const history = useMemo(() => getResourceHistory(node), [node]);
+  const isScheduled = !!node.schedule_id;
+  const isDelayed = !!node.delay_flag;
+  const isExpired = !!node.expired;
+
+  const dueAt = useMemo(() => safeDate(node.due_at ?? metrics?.due_at), [node.due_at, metrics?.due_at]);
+  const expiresAt = useMemo(() => safeDate(node.expires_at), [node.expires_at]);
+  const dueDelta = useMemo(() => (dueAt ? formatDelta(dueAt, new Date()) : null), [dueAt]);
+  const expiryDelta = useMemo(() => (expiresAt ? formatDelta(expiresAt, new Date()) : null), [expiresAt]);
 
   const waitingInCurrentMS = useMemo(() => {
     if (context !== "waiting") return null;
@@ -80,9 +106,13 @@ export function NodeCard({
         e.dataTransfer.setData("text/plain", node.id);
         e.dataTransfer.effectAllowed = "move";
       }}
-      className={`rounded-md bg-gradient-to-br from-indigo-500 to-purple-700 px-3 py-2 text-white shadow-sm ${
-        disabled ? "opacity-70 grayscale" : ""
-      }`}
+      className={`rounded-md px-3 py-2 text-white shadow-sm ${
+        isDelayed
+          ? "bg-gradient-to-br from-rose-600 to-orange-600"
+          : isScheduled
+            ? "bg-gradient-to-br from-teal-600 to-indigo-700"
+            : "bg-gradient-to-br from-indigo-500 to-purple-700"
+      } ${disabled ? "opacity-70 grayscale" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -97,6 +127,24 @@ export function NodeCard({
               <span className="font-mono">{shortId(node.id)}</span>
             )}
           </div>
+
+          <div className="mt-2 flex flex-wrap gap-2">
+            {isScheduled ? (
+              <span className="rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white/95">
+                Scheduled
+              </span>
+            ) : null}
+            {isDelayed ? (
+              <span className="rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white/95">
+                Delayed
+              </span>
+            ) : null}
+            {isExpired ? (
+              <span className="rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white/95">
+                Expired
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -110,6 +158,20 @@ export function NodeCard({
           <div className="text-white/80">
             <span className="font-semibold text-white/90">Waiting:</span>{" "}
             {formatDuration(waitingInCurrentMS)}
+          </div>
+        ) : null}
+        {dueAt && !node.completed ? (
+          <div className={`text-white/80 ${dueDelta?.overdue ? "font-semibold" : ""}`}>
+            <span className="font-semibold text-white/90">Due:</span>{" "}
+            {dueAt.toLocaleString()}
+            {dueDelta ? <span className="ml-2 text-white/85">({dueDelta.label})</span> : null}
+          </div>
+        ) : null}
+        {isScheduled && expiresAt && !node.completed ? (
+          <div className="text-white/80">
+            <span className="font-semibold text-white/90">Expires:</span>{" "}
+            {expiresAt.toLocaleString()}
+            {expiryDelta ? <span className="ml-2 text-white/85">({expiryDelta.label})</span> : null}
           </div>
         ) : null}
         <div className="text-white/80">

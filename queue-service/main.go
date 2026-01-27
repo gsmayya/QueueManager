@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	store "queue-common/store"
 	"queue-service/queueservice"
@@ -33,9 +35,13 @@ func main() {
 	if dbConn != nil {
 		resourcestore = store.NewResStore(dbConn)
 	}
+	var schedstore store.ScheduleStore
+	if dbConn != nil {
+		schedstore = store.NewScheduleStore(dbConn)
+	}
 
 	// Initialize queue service
-	queueService := queueservice.NewQueueServiceWithStore(nodestore, resourcestore)
+	queueService := queueservice.NewQueueServiceWithStores(nodestore, resourcestore, schedstore)
 	// Load resources from config (or fall back to defaults).
 	resources := setupResources(queueService, nodestore, resourcestore)
 	log.Printf("Initialized %d resources", len(resources))
@@ -46,6 +52,22 @@ func main() {
 			log.Printf("[DB] restore state failed (continuing with empty node state): %v", err)
 		}
 	}
+
+	// Start in-process scheduler loop (no-op if scheduling stores are not configured).
+	tickSeconds := 2
+	if v := os.Getenv("SCHEDULER_TICK_SECONDS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			tickSeconds = n
+		}
+	}
+	ticker := time.NewTicker(time.Duration(tickSeconds) * time.Second)
+	go func() {
+		for t := range ticker.C {
+			queueService.RunDueSchedules(context.Background(), t)
+			queueService.ExpiryScan(context.Background(), t)
+			queueService.DelayFlagScan(context.Background(), t)
+		}
+	}()
 
 	// Setup HTTP routes
 	setupRoutes(queueService)

@@ -33,6 +33,7 @@ type QueueService struct {
 	nodes        map[string]*models.Node
 	nodestore    store.NodeStore
 	resstore     store.ResStore
+	schedstore   store.ScheduleStore
 	sessionStart time.Time
 	mu           sync.RWMutex
 }
@@ -45,11 +46,16 @@ func NewQueueService() *QueueService {
 // NewQueueServiceWithStore constructs a QueueService with an optional persistence store.
 // The store is used on a best-effort basis to avoid changing API behavior if the DB is down.
 func NewQueueServiceWithStore(nodestore store.NodeStore, resstore store.ResStore) *QueueService {
+	return NewQueueServiceWithStores(nodestore, resstore, nil)
+}
+
+func NewQueueServiceWithStores(nodestore store.NodeStore, resstore store.ResStore, schedstore store.ScheduleStore) *QueueService {
 	return &QueueService{
 		resources:    make(map[string]*models.Resource),
 		nodes:        make(map[string]*models.Node),
 		nodestore:    nodestore,
 		resstore:     resstore,
+		schedstore:   schedstore,
 		sessionStart: time.Now(),
 	}
 }
@@ -391,6 +397,15 @@ func (qs *QueueService) RestoreFromStore(ctx context.Context) error {
 			ID:        pn.NodeID,
 			Entity:    &models.Entity{ID: pn.EntityID, Name: pn.EntityName},
 			NodeName:  pn.NodeName,
+			ScheduleID: pn.ScheduleID,
+			TimeLimitSeconds: pn.TimeLimitSeconds,
+			WaitingExpirySeconds: pn.WaitingExpirySeconds,
+			AssignedAt: pn.AssignedAt,
+			DueAt: pn.DueAt,
+			ExpiresAt: pn.ExpiresAt,
+			DelayFlag: pn.DelayFlag,
+			Expired: pn.Expired,
+			ExpiredAt: pn.ExpiredAt,
 			Completed: pn.Completed,
 			CreatedAt: pn.CreatedAt,
 		}
@@ -646,4 +661,152 @@ func (qs *QueueService) ListResourcesHandler(w http.ResponseWriter, r *http.Requ
 	resources := qs.ListResources()
 	logging.Debugf("GET /resources success count=%d", len(resources))
 	utils.RespondWithJSON(w, http.StatusOK, resources)
+}
+
+// --- Schedules
+
+func (qs *QueueService) CreateScheduleHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if qs.schedstore == nil || qs.nodestore == nil {
+		utils.RespondWithError(w, http.StatusServiceUnavailable, "scheduling persistence is not configured")
+		return
+	}
+
+	var req models.CreateScheduleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	req.EntityID = strings.TrimSpace(req.EntityID)
+	req.ResourceID = strings.TrimSpace(req.ResourceID)
+
+	if req.EntityID == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "entity_id is required")
+		return
+	}
+	if req.ResourceID == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "resource_id is required")
+		return
+	}
+	if req.IntervalSeconds <= 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "interval_seconds must be > 0")
+		return
+	}
+	if req.TimeLimitSeconds <= 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "time_limit_seconds must be > 0")
+		return
+	}
+	if req.WaitingExpirySeconds <= 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "waiting_expiry_seconds must be > 0")
+		return
+	}
+	if req.EndsAt != nil && !req.EndsAt.After(time.Now()) {
+		utils.RespondWithError(w, http.StatusBadRequest, "ends_at must be in the future")
+		return
+	}
+	if _, err := qs.GetResource(req.ResourceID); err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid resource_id")
+		return
+	}
+
+	ent, err := fetchMasterEntityByID(r.Context(), req.EntityID)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid entity_id")
+		return
+	}
+
+	now := time.Now()
+	// Ensure entity exists in nodequeue DB so FK (schedules.entity_id) succeeds.
+	if err := qs.nodestore.EnsureEntity(r.Context(), req.EntityID, ent.Name, now); err != nil {
+		logging.Errorf("POST /schedules ensure_entity_failed entity_id=%s err=%v", req.EntityID, err)
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to persist entity for schedule")
+		return
+	}
+
+	created, err := qs.schedstore.CreateSchedule(r.Context(), req)
+	if err != nil {
+		logging.Errorf("POST /schedules failed err=%v", err)
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.RespondWithJSON(w, http.StatusCreated, created)
+}
+
+func (qs *QueueService) ListSchedulesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if qs.schedstore == nil {
+		utils.RespondWithError(w, http.StatusServiceUnavailable, "scheduling persistence is not configured")
+		return
+	}
+
+	schedules, err := qs.schedstore.ListSchedules(r.Context())
+	if err != nil {
+		logging.Errorf("GET /schedules failed err=%v", err)
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.RespondWithJSON(w, http.StatusOK, schedules)
+}
+
+func (qs *QueueService) UpdateScheduleHandler(w http.ResponseWriter, r *http.Request, scheduleID string) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if qs.schedstore == nil {
+		utils.RespondWithError(w, http.StatusServiceUnavailable, "scheduling persistence is not configured")
+		return
+	}
+
+	var req models.UpdateScheduleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	if req.ResourceID != nil {
+		rr := strings.TrimSpace(*req.ResourceID)
+		req.ResourceID = &rr
+		if rr == "" {
+			utils.RespondWithError(w, http.StatusBadRequest, "resource_id cannot be empty")
+			return
+		}
+		if _, err := qs.GetResource(rr); err != nil {
+			utils.RespondWithError(w, http.StatusBadRequest, "invalid resource_id")
+			return
+		}
+	}
+	if req.IntervalSeconds != nil && *req.IntervalSeconds <= 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "interval_seconds must be > 0")
+		return
+	}
+	if req.TimeLimitSeconds != nil && *req.TimeLimitSeconds <= 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "time_limit_seconds must be > 0")
+		return
+	}
+	if req.WaitingExpirySeconds != nil && *req.WaitingExpirySeconds <= 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "waiting_expiry_seconds must be > 0")
+		return
+	}
+	if req.EndsAt != nil && !req.EndsAt.After(time.Now()) {
+		utils.RespondWithError(w, http.StatusBadRequest, "ends_at must be in the future")
+		return
+	}
+
+	updated, err := qs.schedstore.UpdateSchedule(r.Context(), scheduleID, req)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, store.ErrNotFound) {
+			status = http.StatusNotFound
+		}
+		logging.Errorf("PUT /schedules/%s failed err=%v", scheduleID, err)
+		utils.RespondWithError(w, status, err.Error())
+		return
+	}
+	utils.RespondWithJSON(w, http.StatusOK, updated)
 }

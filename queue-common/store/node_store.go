@@ -16,9 +16,34 @@ func NewNodeStore(db *sql.DB) *NodeStoreImpl {
 	return &NodeStoreImpl{db: db}
 }
 
+func (s *NodeStoreImpl) EnsureEntity(ctx context.Context, entityID, entityName string, createdAt time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO entities (id, name, created_at)
+		VALUES ($1::uuid, $2, $3)
+		ON CONFLICT (id) DO NOTHING
+	`, entityID, entityName, createdAt)
+	return err
+}
+
 func (s *NodeStoreImpl) ListNodes(ctx context.Context) ([]PersistedNode, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT n.id::text, n.entity_id::text, e.name, COALESCE(n.node_name, ''), n.resource_id, n.completed, n.created_at
+		SELECT
+			n.id::text,
+			n.entity_id::text,
+			e.name,
+			COALESCE(n.node_name, ''),
+			n.resource_id,
+			n.schedule_id::text,
+			n.time_limit_seconds,
+			n.waiting_expiry_seconds,
+			n.assigned_at,
+			n.due_at,
+			n.expires_at,
+			n.delay_flag,
+			n.expired,
+			n.expired_at,
+			n.completed,
+			n.created_at
 		FROM nodes n
 		JOIN entities e ON e.id = n.entity_id
 		WHERE n.completed = false
@@ -32,8 +57,60 @@ func (s *NodeStoreImpl) ListNodes(ctx context.Context) ([]PersistedNode, error) 
 	out := make([]PersistedNode, 0)
 	for rows.Next() {
 		var pn PersistedNode
-		if err := rows.Scan(&pn.NodeID, &pn.EntityID, &pn.EntityName, &pn.NodeName, &pn.ResourceID, &pn.Completed, &pn.CreatedAt); err != nil {
+		var scheduleID sql.NullString
+		var tls sql.NullInt64
+		var wes sql.NullInt64
+		var assignedAt sql.NullTime
+		var dueAt sql.NullTime
+		var expiresAt sql.NullTime
+		var expiredAt sql.NullTime
+		if err := rows.Scan(
+			&pn.NodeID,
+			&pn.EntityID,
+			&pn.EntityName,
+			&pn.NodeName,
+			&pn.ResourceID,
+			&scheduleID,
+			&tls,
+			&wes,
+			&assignedAt,
+			&dueAt,
+			&expiresAt,
+			&pn.DelayFlag,
+			&pn.Expired,
+			&expiredAt,
+			&pn.Completed,
+			&pn.CreatedAt,
+		); err != nil {
 			return nil, err
+		}
+		if scheduleID.Valid {
+			v := scheduleID.String
+			pn.ScheduleID = &v
+		}
+		if tls.Valid {
+			v := int(tls.Int64)
+			pn.TimeLimitSeconds = &v
+		}
+		if wes.Valid {
+			v := int(wes.Int64)
+			pn.WaitingExpirySeconds = &v
+		}
+		if assignedAt.Valid {
+			v := assignedAt.Time
+			pn.AssignedAt = &v
+		}
+		if dueAt.Valid {
+			v := dueAt.Time
+			pn.DueAt = &v
+		}
+		if expiresAt.Valid {
+			v := expiresAt.Time
+			pn.ExpiresAt = &v
+		}
+		if expiredAt.Valid {
+			v := expiredAt.Time
+			pn.ExpiredAt = &v
 		}
 		out = append(out, pn)
 	}
@@ -180,4 +257,97 @@ func (s *NodeStoreImpl) InsertNodeLog(ctx context.Context, nodeID, action string
 		nodeID, action, resourceID, ts,
 	)
 	return err
+}
+
+func (s *NodeStoreImpl) UpdateNodeScheduling(ctx context.Context, nodeID string, scheduleID *string, timeLimitSeconds *int, assignedAt, dueAt *time.Time, delayFlag *bool) error {
+	var tl any = nil
+	if timeLimitSeconds != nil {
+		tl = *timeLimitSeconds
+	}
+	var as any = nil
+	if assignedAt != nil {
+		as = *assignedAt
+	}
+	var du any = nil
+	if dueAt != nil {
+		du = *dueAt
+	}
+	var df any = nil
+	if delayFlag != nil {
+		df = *delayFlag
+	}
+
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE nodes
+		SET
+			schedule_id = COALESCE($2::uuid, schedule_id),
+			time_limit_seconds = COALESCE($3, time_limit_seconds),
+			assigned_at = COALESCE($4, assigned_at),
+			due_at = COALESCE($5, due_at),
+			delay_flag = COALESCE($6, delay_flag)
+		WHERE id = $1::uuid
+	`, nodeID, scheduleID, tl, as, du, df)
+	return err
+}
+
+func (s *NodeStoreImpl) UpdateNodeExpiry(ctx context.Context, nodeID string, waitingExpirySeconds *int, expiresAt *time.Time) error {
+	var wes any = nil
+	if waitingExpirySeconds != nil {
+		wes = *waitingExpirySeconds
+	}
+	var ex any = nil
+	if expiresAt != nil {
+		ex = *expiresAt
+	}
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE nodes
+		SET
+			waiting_expiry_seconds = COALESCE($2, waiting_expiry_seconds),
+			expires_at = COALESCE($3, expires_at)
+		WHERE id = $1::uuid
+	`, nodeID, wes, ex)
+	return err
+}
+
+func (s *NodeStoreImpl) MarkNodeExpired(ctx context.Context, nodeID string, expiredAt time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE nodes
+		SET
+			completed = true,
+			expired = true,
+			expired_at = $2,
+			resource_id = NULL
+		WHERE id = $1::uuid
+	`, nodeID, expiredAt)
+	return err
+}
+
+func (s *NodeStoreImpl) HasActiveNodeForSchedule(ctx context.Context, scheduleID string) (bool, error) {
+	var exists bool
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM nodes
+			WHERE schedule_id = $1::uuid AND completed = false
+		)
+	`, scheduleID).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (s *NodeStoreImpl) MarkOverdueNodes(ctx context.Context, now time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE nodes
+		SET delay_flag = true
+		WHERE completed = false
+		  AND delay_flag = false
+		  AND due_at IS NOT NULL
+		  AND due_at < $1
+	`, now)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
 }

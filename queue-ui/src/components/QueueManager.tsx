@@ -130,6 +130,12 @@ export function QueueManager() {
             Metrics
           </Link>
           <Link
+            href="/schedules"
+            className="rounded-full bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/15"
+          >
+            Schedules
+          </Link>
+          <Link
             href="/admin"
             className="rounded-full bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/15"
           >

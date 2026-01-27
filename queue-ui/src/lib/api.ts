@@ -1,4 +1,12 @@
-import type { ErrorResponse, Node, NodesMetricsResponse, Resource, ResourcesSessionMetricsResponse } from "./types";
+import type {
+  ErrorResponse,
+  Node,
+  NodesMetricsResponse,
+  Resource,
+  ResourcesSessionMetricsResponse,
+  Schedule,
+  SchedulesMetricsResponse,
+} from "./types";
 
 export class ApiError extends Error {
   status: number;
@@ -109,6 +117,52 @@ export async function allocateNode(nodeId: string): Promise<Node> {
 
 export async function completeNode(nodeId: string): Promise<Node> {
   return requestJson<Node>(`/nodes/${nodeId}/complete`, { method: "POST" });
+}
+
+// --- Schedules
+
+export async function listSchedules(): Promise<Schedule[]> {
+  return requestJson<Schedule[]>("/schedules", { method: "GET" });
+}
+
+export async function createSchedule(args: {
+  entity_id: string;
+  resource_id: string;
+  interval_seconds: number;
+  time_limit_seconds: number;
+  waiting_expiry_seconds: number;
+  ends_at?: string;
+  enabled?: boolean;
+  next_run_at?: string;
+}): Promise<Schedule> {
+  return requestJson<Schedule>("/schedules", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function updateSchedule(
+  scheduleId: string,
+  patch: Partial<{
+    resource_id: string;
+    interval_seconds: number;
+    time_limit_seconds: number;
+    waiting_expiry_seconds: number;
+    ends_at: string;
+    enabled: boolean;
+    next_run_at: string;
+  }>,
+): Promise<Schedule> {
+  return requestJson<Schedule>(`/schedules/${scheduleId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function getSchedulesMetrics(): Promise<SchedulesMetricsResponse> {
+  return requestJson<SchedulesMetricsResponse>("/schedules/metrics", { method: "GET" });
 }
 
 
