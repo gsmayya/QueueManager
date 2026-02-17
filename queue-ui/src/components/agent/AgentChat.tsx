@@ -104,7 +104,7 @@ export function AgentChat() {
         </div>
         <button
           type="button"
-          onClick={refresh}
+          onClick={() => void refresh()}
           disabled={busy}
           className="rounded-md border px-3 py-2 text-sm hover:opacity-90 disabled:opacity-50"
         >
